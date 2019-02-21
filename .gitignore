@@ -13,6 +13,7 @@ data/dict/
 data/*.dict
 data/*.pkl
 data/*.txt
+data/*.dist
 
 # data/*.dist
 
