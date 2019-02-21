@@ -1,0 +1,24 @@
+### Python
+
+.DS_Store
+.ropeproject
+
+*.pyc
+__pycache__
+
+
+### Data
+*.scel
+data/dict/
+data/*.dict
+data/*.pkl
+data/*.txt
+
+# data/*.dist
+
+### log
+log/
+
+### models
+models/
+*.pth
