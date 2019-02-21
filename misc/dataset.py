@@ -31,6 +31,8 @@ def load_data(config, vocab):
 
                 ids = vocab.words_to_id(tokens)
 
+                label = int(label)
+
                 datas.append((ids, label))
         pickle.dump(datas, open(datas_pkl_path, 'wb'))
     else:
@@ -101,24 +103,31 @@ class MyCollate:
         batch_datas.sort(key=lambda item: len(item[0]), reverse=True)
 
         inputs, lengths, labels = list(), list(), list()
+        inputs_pos = list()
 
         for ids, label in batch_datas:
             ids = ids[-min(max_len, len(ids)):]
-            lengths.append(len(ids) + 1)
+            lengths.append(len(ids))
 
             # pad
             ids = ids + [PAD_ID] * (max_len - len(ids))
             inputs.append(ids)
 
+            pos = [pos_i + 1 if w_i != PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
+            inputs_pos.append(pos)
+
             labels.append(label)
 
-        inputs = torch.tensor(inputs, dtype=torch.long)
-
         # to [max_len, batch_size]
+        inputs = torch.tensor(inputs, dtype=torch.long)
         inputs = inputs.transpose(0, 1)
+
         lengths = torch.tensor(lengths, dtype=torch.long)
 
-        # [batch_size]
-        lables = torch.tensor(labels, dtype=torch.long)
+        inputs_pos = torch.tensor(inputs_pos, dtype=torch.long)
+        inputs_pos = inputs_pos.transpose(0, 1)
 
-        return inputs, lengths, labels
+        # [batch_size]
+        labels = torch.tensor(labels, dtype=torch.long)
+
+        return inputs, lengths, labels, inputs_pos

@@ -19,9 +19,10 @@ from sklearn.metrics import f1_score
 from modules.optim import ScheduledOptimizer
 from modules.early_stopping import EarlyStopping
 
-from misc.vocab import Vocab
 from sa_model import SAModel
-from dataset import load_data, build_dataloader
+
+from misc.vocab import Vocab
+from misc.dataset import load_data, build_dataloader
 
 # Parse argument for language to train
 parser = argparse.ArgumentParser()
@@ -29,6 +30,7 @@ parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--data_dir', type=str, help='')
 parser.add_argument('--vocab_path', type=str, help='')
 parser.add_argument('--vocab_size', type=int, help='')
+parser.add_argument('--rnn_type', type=str, help='RNN, LSTM, GRU')
 parser.add_argument('--embedding_size', type=int)
 parser.add_argument('--hidden_size', type=int)
 parser.add_argument('--bidirectional', action='store_true')
@@ -36,7 +38,7 @@ parser.add_argument('--num_layers', type=int)
 parser.add_argument('--transformer_size', type=int)
 parser.add_argument('--inner_hidden_size', type=int)
 parser.add_argument('--dense_size', type=int)
-parser.add_argument('--use_pretrained_embeddings', action='store_ture')
+parser.add_argument('--use_pretrained_embedding', action='store_true')
 parser.add_argument('--n_classes', type=int)
 parser.add_argument('--t_num_layers', type=int)
 parser.add_argument('--k_size', type=int)
@@ -85,10 +87,14 @@ datas = load_data(args, vocab)
 # dataset, data_load
 train_data, valid_data, test_data = build_dataloader(args, datas)
 
+# load pretrained embedding
+pretrained_embedding = None
+
 # model
 model = SAModel(
     args,
-    device
+    device,
+    pretrained_embedding
 ).to(device)
 
 print(model)
@@ -162,7 +168,7 @@ def train_epochs():
 
         start = time.time()
         valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
-        print(' (Validation) loss: {ppl: 8.5f}, accuracy: {accuracy:3.3f} %, '
+        print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f} %, '
               'recall: {accuracy:3.3f} %, f1: {f1: 3.3f} %'
               'elapse: {elapse:3.3f} min'.format(
                   loss=valid_loss,
@@ -239,15 +245,19 @@ def train(epoch):
             desc=' (Training: %d) ' % epoch, leave=False):
 
         # prepare data
-        inputs, lengths, labels = map(lambda x: x.to(device), batch)
+        inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
         # [batch_size, max_len]
+        # print('inputs: ', inputs)
+        print('legnths: ', lengths)
+        # print('labels: ', labels)
 
         # forward
         optimizer.zero_grad()
 
         outputs, attns = model(
             inputs,
-            lengths
+            lengths,
+            inputs_pos
         )
 
         # backward
@@ -292,11 +302,15 @@ def eval(epoch):
                 valid_data, mininterval=2,
                 desc=' (Validation: %d) ' % epoch, leave=False):
 
-            inputs, lengths, labels = map(lambda x: x.to(device), batch)
+            inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
+            # print('inputs: ', inputs)
+            # print('legnths: ', lengths)
+            # print('labels: ', labels)
 
-            outputs = model(
+            outputs, attns = model(
                 inputs,
-                lengths
+                lengths,
+                inputs_pos
             )
 
             # backward
@@ -324,6 +338,8 @@ def cal_performance(pred, gold, smoothing=False):
     ''' Apply label smoothing if needed '''
     # pred: [batch_size, n_classes]
     # gold: [batch_size]
+    # print('pred shape: ', pred.shape)
+    # print('gold shape: ', gold.shape)
 
     loss = cal_loss(pred, gold, smoothing)
 

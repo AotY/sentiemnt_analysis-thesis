@@ -15,19 +15,19 @@ from misc.vocab import PAD_ID
     Utils
 """
 
-def load_embeddings(self, config, pretrained_embedding=None):
+def load_embedding(config, pretrained_embedding=None):
     """Load the pretrained_embedding based on flag"""
 
-    if config.use_pretrained_embeddings is True and pretrained_embedding is None:
+    if config.use_pretrained_embedding is True and pretrained_embedding is None:
         raise Exception("Send a pretrained word embedding as an argument")
 
-    if not config.use_pretrained_embeddings and config.vocab_size is None:
+    if not config.use_pretrained_embedding and config.vocab_size is None:
         raise Exception("Vocab size cannot be empty")
 
-    if not config.use_pretrained_embeddings:
+    if not config.use_pretrained_embedding:
         embedding = nn.Embedding(config.vocab_size, config.embedding_size, padding_idx=PAD_ID)
 
-    elif config.use_pretrained_embeddings:
+    elif config.use_pretrained_embedding:
         embedding = nn.Embedding(embedding.size(0), embedding.size(1), paddingi_idx=PAD_ID)
         embedding.weight = nn.Parameter(pretrained_embedding)
         embedding_size = embedding.size(1)

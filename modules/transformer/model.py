@@ -57,7 +57,7 @@ class Transformer(nn.Module):
             )
 
             self.linear_final = nn.Linear(
-                self.transformer_size,
+                self.hidden_size * self.bidirection_num,
                 self.n_classes,
             )
         elif self.model_type == 'transformer_weight':
@@ -83,10 +83,11 @@ class Transformer(nn.Module):
         Args:
             inputs: [batch_size, max_len]
             inputs_pos: [batch_size, max_len]
-        return: [batch_size * max_len, vocab_size]
+        return: [batch_size, n_classes], [batch_size, max_len, max_len]
         """
         # [batch_size, max_len, transformer_size]
         outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
+        print('outputs shape: ', outputs.shape)
 
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
@@ -94,7 +95,7 @@ class Transformer(nn.Module):
             outputs = outputs.view(outputs.size(0), -1)
             outputs = F.log_softmax(self.linear_final(outputs), dim=1)
         elif self.model_type == 'transformer_mean':
-            outputs = outputs.mean(1)
+            outputs = outputs.mean(dim=1)
             outputs = F.log_softmax(self.linear_final(outputs), dim=1)
         elif self.model_type == 'transformer_rnn':
             outputs, _ = self.rnn(outputs.transpose(0, 1))

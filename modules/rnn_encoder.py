@@ -45,57 +45,37 @@ class RNNEncoder(nn.Module):
 
         rnn_init(config.rnn_type, self.rnn)
 
-        self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
+        self.linear_final = nn.Linear(self.hidden_size * self.bidirection_num, self.n_classes)
 
-    def forward(self, inputs, lengths, hidden_state=None, sort=True):
+    def forward(self, inputs, lengths, hidden_state=None):
         '''
         params:
             inputs: [seq_len, batch_size]  LongTensor
             hidden_state: [num_layers * bidirectional, batch_size, hidden_size]
         :return
-            outputs: [seq_len, batch_size, num_directions * hidden_size]
+            outputs: [batch_size, n_classes]
         '''
         if lengths is None:
             raise ValueError('lengths is none.')
-
-        total_length = inputs.size(0)
-
-        sorted_lengths = lengths
-
-        if not sort:
-            # sort lengths
-            sorted_lengths, sorted_indexes = torch.sort(
-                lengths, dim=0, descending=True)
-
-            # restore to original indexes
-            _, restore_indexes = torch.sort(sorted_indexes, dim=0)
-
-            # [max_len, batch_size]
-            inputs = inputs.index_select(1, sorted_indexes)
 
         # embedded
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
-        embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_lengths)
+        print('embedded shape: ', embedded.shape)
+        embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         if hidden_state is not None:
             outputs, hidden_state = self.rnn(embedded, hidden_state)
         else:
             outputs, hidden_state = self.rnn(embedded)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=total_length)
-
-        if not sort:
-            # [max_len, batch_size, hidden_state]
-            outputs = outputs.index_select(1, restore_indexes).contiguous()
-
-            # [num_layer * bidirection_num, batch_size, hidden_state / bidirection_num]
-            hidden_state = hidden_state.index_select(
-                1, restore_indexes).contiguous()
+        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+        print('outputs shape: ', outputs.shape)
 
         # last step output [batch_size, hidden_state]
         output = outputs[-1]
+        print('output shape: ', output.shape)
 
         output = F.log_softmax(self.linear_final(output), dim=1)
 

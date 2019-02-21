@@ -16,7 +16,7 @@ from modules.cnn_encoder import CNNEncoder
 from modules.self_attention.model import StructuredSelfAttention
 from modules.transformer.model import Transformer
 
-from modules.utils import load_embeddings
+from modules.utils import load_embedding
 
 
 class SAModel(nn.Module):
@@ -26,14 +26,15 @@ class SAModel(nn.Module):
     '''
     def __init__(self,
                  config,
-                 pretrained_embedding=None,
-                 device='cuda'):
+                 device='cuda',
+                 pretrained_embedding=None):
         super(SAModel, self).__init__()
 
         self.config = config
         self.device = device
+        # print('config: {}'.format(config))
 
-        embedding = load_embeddings(
+        embedding = load_embedding(
             config,
             pretrained_embedding
         )
@@ -54,7 +55,7 @@ class SAModel(nn.Module):
                 embedding
             )
         #  elif config.model_type in ['transformer', 'transformer_rnn', 'transformer_weight']:
-        elif config.model.find('transformer') != -1:
+        elif config.model_type.find('transformer') != -1:
             self.encoder = Transformer(
                 config,
                 embedding
@@ -62,10 +63,11 @@ class SAModel(nn.Module):
 
     def forward(self,
                 inputs,
-                lengths):
+                lengths,
+                inputs_pos):
         '''
         Args:
-            inputs: [q_max_len, batch_size]
+            inputs: [max_len, batch_size]
             lengths: [batch_size]
         '''
         if self.config.model_type == 'rnn':
@@ -74,7 +76,7 @@ class SAModel(nn.Module):
                 inputs,
                 lengths
             )
-        elif config.model_type == 'cnn':
+        elif self.config.model_type == 'cnn':
             # [batch_size, n_classes]
             outputs, attns = self.encoder(
                 inputs,
@@ -87,11 +89,11 @@ class SAModel(nn.Module):
                 lengths
             )
         #  elif config.model_type in ['transformer', 'transformer_rnn', 'transformer_weight']:
-        elif self.config.model.find('transformer') != -1:
+        elif self.config.model_type.find('transformer') != -1:
             # [batch_size, n_classes], [batch_size, max_len, max_len]
             outputs, attns = self.encoder(
-                inputs,
-                lengths
+                inputs.transpose(0, 1),
+                inputs_pos.transpose(0, 1)
             )
 
         return outputs, attns

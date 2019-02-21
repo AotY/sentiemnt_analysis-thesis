@@ -53,14 +53,14 @@ class StructuredSelfAttention(nn.Module):
         self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
 
+        self.bidirection_num = 2 if config.bidirectional else 1
+        self.hidden_size = config.hidden_size // self.bidirection_num
+
         self.n_classes = config.n_classes
-        self.hidden_size = config.hidden_size
-        self.batch_size = config.batch_size
         self.num_heads = config.num_heads
-        self.dense_size = config.dense_size
 
         # dropout
-        #  self.dropout = nn.Dropout(config.dropout)
+        self.dropout = nn.Dropout(config.dropout)
 
         #  self.rnn = nn.LSTM(self.embedding_size, self.hidden_size, config.num_layers)
         self.rnn = rnn_factory(
@@ -75,51 +75,49 @@ class StructuredSelfAttention(nn.Module):
         rnn_init(config.rnn_type, self.rnn)
 
         # W_s1
-        self.linear_first = torch.nn.Linear(self.hidden_size, self.dense_size)
+        self.linear_first = torch.nn.Linear(self.hidden_size * self.bidirection_num, config.dense_size)
         self.linear_first.bias.data.fill_(0)
 
         # W_s2
-        self.linear_second = torch.nn.Linear(self.dense_size, self.num_heads)
+        self.linear_second = torch.nn.Linear(config.dense_size, self.num_heads)
         self.linear_second.bias.data.fill_(0)
 
-        self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
-
-    def init_hidden(self, config):
-        return (torch.zeros(1, self.batch_size, self.hidden_size), torch.zeros(1, self.batch_size, self.hidden_size))
+        self.linear_final = nn.Linear(self.hidden_size * self.bidirection_num, config.n_classes)
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         """
         inputs: [max_len, batch_size]
         """
         embedded = self.embedding(inputs)
-        #  embedded = self.dropout(embedded)
+        embedded = self.dropout(embedded)
 
         embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         # [max_len, batch_size, hidden_size]
-        total_length = inputs.size(0)
         if hidden_state is None:
             outputs, hidden_state = self.rnn(embedded)
         else:
             outputs, hidden_state = self.rnn(embedded, hidden_state)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(
-            outputs, padding_value=PAD_ID, total_length=total_length)
-
-        # [batch_size, max_len, hidden_size]
-        x = outputs.transpose(0, 1)
+        # [max_len, batch_size, hidden_size]
+        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
 
         # [batch_size, max_len, dense_size]
-        x = F.tanh(self.linear_first(outputs))
+        x = F.tanh(self.linear_first(outputs.transpose(0, 1)))
+        # print('x shape: ', x.shape)
 
         # [batch_size, max_len, num_heads]
-        x = self.linear_second(outputs)
+        x = self.linear_second(x)
+        # print('x shape: ', x.shape)
 
         # [batch_size, max_len, num_heads]
-        x = F.softmax(outputs, dim=1)
+        x = F.softmax(x, dim=1)
+        # print('x shape: ', x.shape)
 
         # [batch_size, num_heads, max_len]
         attns = x.transpose(1, 2)
+
+        # print('attns shape: ', attns.shape)
 
         # [batch_size, num_heads, hidden_size]
         sentence_embeddings = attns @ outputs.transpose(0, 1)

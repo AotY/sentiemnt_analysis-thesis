@@ -39,9 +39,9 @@ class EncoderLayer(nn.Module):
             non_pad_mask: [batch_size, max_len, transformer_size]
             attn_mask: [batch_size, max_len, 1]
         """
-        #  print('enc_input: ', enc_input.shape)
-        #  print('non_pad_mask: ', non_pad_mask.shape)
-        #  print('attn_mask: ', attn_mask.shape)
+        # print('enc_input: ', enc_input.shape)
+        # print('non_pad_mask: ', non_pad_mask.shape)
+        # print('attn_mask: ', attn_mask.shape)
 
         enc_output, enc_attn = self.mh_attn(
             enc_input,
@@ -49,7 +49,7 @@ class EncoderLayer(nn.Module):
             enc_input,
             mask=attn_mask
         )
-        #  print('layer enc_output: ', enc_output)
+        # print('layer enc_output: ', enc_output)
 
         enc_output = enc_output * non_pad_mask
 

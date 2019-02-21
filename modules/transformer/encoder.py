@@ -48,7 +48,7 @@ class Encoder(nn.Module):
     def forward(self,
                 enc_inputs,
                 enc_inputs_pos=None,
-                return_attns=False):
+                return_attns=True):
         """
         Args:
             enc_inputs: [batch_size, max_len]
@@ -56,8 +56,8 @@ class Encoder(nn.Module):
         return:
             enc_outputs: [batch_size, max_len, transformer_size]
         """
-        #  print('enc_inputs: ', enc_inputs.shape)
-        #  print('enc_inputs_pos: ', enc_inputs_pos.shape)
+        # print('enc_inputs: ', enc_inputs.shape)
+        # print('enc_inputs_pos: ', enc_inputs_pos.shape)
         if return_attns:
             enc_slf_attn_list = list()
 
@@ -73,13 +73,12 @@ class Encoder(nn.Module):
         # dropout, default: 0.1
         enc_embedded = self.dropout(enc_embedded)
 
-        if self.has_position:
-            pos_embedded = self.pos_embedding(enc_inputs_pos).to(enc_inputs.device)
-            #  print('embedded: ', embedded.shape)
-            #  print('pos_embedded: ', pos_embedded.shape)
-            enc_embedded = enc_embedded + pos_embedded
+        pos_embedded = self.pos_embedding(enc_inputs_pos).to(enc_inputs.device)
+        # print('enc_embedded: ', enc_embedded.shape)
+        # print('pos_embedded: ', pos_embedded.shape)
+        enc_embedded = enc_embedded + pos_embedded
 
-            #  print('enc_embedded shape: ', enc_embedded.shape) # [b, max_len, embedding_size]
+        # print('enc_embedded shape: ', enc_embedded.shape) # [b, max_len, embedding_size]
 
         enc_outputs = enc_embedded
         for layer in self.layer_stack:
@@ -92,7 +91,7 @@ class Encoder(nn.Module):
             if return_attns:
                 enc_slf_attn_list.append(en_slf_attn)
 
-        #  print('enc_outputs shape: ', enc_outputs.shape)
+        # print('enc_outputs shape: ', enc_outputs.shape)
         if return_attns:
             return enc_outputs, enc_slf_attn_list
 

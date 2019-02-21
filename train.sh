@@ -16,14 +16,17 @@ python train.py \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --log log/ \
+    --model_type transformer_mean \
+    --n_classes 3 \
+    --rnn_type LSTM \
     --embedding_size 128 \
     --hidden_size 256 \
     --num_layers 2 \
     --t_num_layers 2 \
-    --transformer_size 256 \
+    --transformer_size 128 \
     --k_size 64 \
     --v_size 64 \
-    --inner_hidden_size 128 \
+    --inner_hidden_size 256 \
     --dense_size 128 \
     --num_heads 6 \
     --bidirectional \
@@ -44,7 +47,6 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --smoothing \
-    --model_type rnn \
     --mode train \
     #--checkpoint ./models/accu_43.850.pth \
 
