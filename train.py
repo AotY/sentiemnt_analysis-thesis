@@ -19,7 +19,7 @@ from sklearn.metrics import f1_score
 from modules.optim import ScheduledOptimizer
 from modules.early_stopping import EarlyStopping
 
-from vocab import Vocab
+from misc.vocab import Vocab
 from sa_model import SAModel
 from dataset import load_data, build_dataloader
 
