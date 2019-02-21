@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 
 from modules.rnn_encoder import RNNEncoder
-form modules.cnn_encoder import CNNEncoder
+from modules.cnn_encoder import CNNEncoder
 from modules.self_attention.model import StructuredSelfAttention
 from modules.transformer.model import Transformer
 

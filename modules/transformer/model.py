@@ -6,7 +6,7 @@ Transformer
 """
 import torch
 import torch.nn as nn
-import torch.nn.funtional as F
+import torch.nn.functional as F
 
 from modules.transformer.encoder import Encoder
 from modules.utils import rnn_factory
