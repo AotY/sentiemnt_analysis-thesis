@@ -12,7 +12,9 @@ import torch
 import torch.nn as nn
 
 from modules.rnn_encoder import RNNEncoder
-from modules.cnn_encoder import CNNEncoder
+#  from modules.cnn_encoder import CNNEncoder
+from modules.cnn import CNNEncoder
+from modules.rcnn_encoder import RCNNEncoder
 from modules.self_attention.model import StructuredSelfAttention
 from modules.transformer.model import Transformer
 
@@ -39,13 +41,18 @@ class SAModel(nn.Module):
             pretrained_embedding
         )
 
-        if config.model_type == 'rnn':
+        if config.model_type in ['rnn', 'rnn_attention']:
             self.encoder = RNNEncoder(
                 config,
                 embedding
             )
         elif config.model_type == 'cnn':
             self.encoder = CNNEncoder(
+                config,
+                embedding
+            )
+        elif config.model_type == 'rcnn':
+            self.encoder = RCNNEncoder(
                 config,
                 embedding
             )
@@ -70,6 +77,20 @@ class SAModel(nn.Module):
             inputs: [max_len, batch_size]
             lengths: [batch_size]
         '''
+        if self.config.model_type.find('transformer') == -1:
+            # [batch_size, n_classes], None or [batch_size, heads, max_len]
+            outputs, attns = self.encoder(
+                inputs,
+                lengths
+            )
+        else:
+            # [batch_size, n_classes], [batch_size, max_len, max_len]
+            outputs, attns = self.encoder(
+                inputs.transpose(0, 1),
+                inputs_pos.transpose(0, 1)
+            )
+
+        """
         if self.config.model_type == 'rnn':
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
@@ -95,5 +116,7 @@ class SAModel(nn.Module):
                 inputs.transpose(0, 1),
                 inputs_pos.transpose(0, 1)
             )
+
+        """
 
         return outputs, attns

@@ -16,7 +16,7 @@ python train.py \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --log log/ \
-    --model_type transformer_mean \
+    --model_type cnn \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 128 \
@@ -30,6 +30,11 @@ python train.py \
     --dense_size 128 \
     --num_heads 6 \
     --bidirectional \
+    --in_channels 1 \
+    --out_channels 128 \
+    --kernel_heights 3 4 5
+    --stride 0 \
+    --padding 0 \
     --dropout 0.2 \
     --lr 0.001 \
     --max_grad_norm 5.0 \

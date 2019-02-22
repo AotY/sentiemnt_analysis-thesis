@@ -15,11 +15,11 @@ import torch.nn.functional as F
 from modules.utils import rnn_factory, rnn_init
 
 
-class RNNEncoder(nn.Module):
+class RCNNEncoder(nn.Module):
     def __init__(self,
                  config,
                  embedding):
-        super(RNNEncoder, self).__init__()
+        super(RCNNEncoder, self).__init__()
 
         self.model_type = config.model_type
         self.rnn_type = config.rnn_type
@@ -47,8 +47,10 @@ class RNNEncoder(nn.Module):
 
         rnn_init(config.rnn_type, self.rnn)
 
-        self.linear_final = nn.Linear(
-            self.hidden_size * self.bidirection_num, self.n_classes)
+        self.W2 = nn.Linear(
+            self.hidden_size * self.bidirection_num + self.embedding_size, self.hidden_size)
+
+        self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
 
     def forward(self, inputs, lengths, hidden_state=None):
         '''
@@ -76,17 +78,21 @@ class RNNEncoder(nn.Module):
         outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
         print('outputs shape: ', outputs.shape)
 
-        if self.model_type == 'rnn_attention':
-            # [batch_size, max_len, hidden_size]
-            outputs = outputs.permute(1, 0, 2)
-            final_state = hidden_state
-            if self.rnn_type == 'LSTM':
-                final_state = hidden_state[0]
+        # [batch_size, max_len, hidden_size + embedding_size]
+        outputs = torch.cat((outputs, inputs), 2).permute(1, 0, 2)
 
-            outputs = self.attention_net(outputs, final_state)
-        else:
-            outputs = outputs[-1]
-        # last step output [batch_size, hidden_state]
+        # [batch_size, max_len, hidden_size]
+        outputs = self.W2(outputs)
+
+        # [batch_size, hidden_size, max_len]
+        outputs = outputs.permute(0, 2, 1)
+
+        # [batch_size, hidden_size, 1]
+        outputs = F.max_pool1d(outputs, outputs.size(2))
+
+        # [batch_size, hidden_size]
+        outputs = outputs.squeeze(2)
+
         outputs = F.log_softmax(self.linear_final(outputs), dim=1)
 
         return outputs, None
@@ -99,7 +105,7 @@ class RNNEncoder(nn.Module):
         Arguments
         ---------
 
-        lstm_output : Final output of the LSTM which contains hidden layer outputs for each sequence.
+        lstm_output : Final outputs of the LSTM which contains hidden layer outputs for each sequence.
         final_state : Final time-step hidden state (h_n) of the LSTM
 
         ---------
@@ -118,6 +124,7 @@ class RNNEncoder(nn.Module):
         hidden = final_state.squeeze(0)
         attn_weights = torch.bmm(lstm_output, hidden.unsqueeze(2)).squeeze(2)
         soft_attn_weights = F.softmax(attn_weights, 1)
-        new_hidden_state = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
+        new_hidden_state = torch.bmm(lstm_output.transpose(
+            1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
 
         return new_hidden_state
