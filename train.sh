@@ -16,7 +16,7 @@ python train.py \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --log log/ \
-    --model_type cnn \
+    --model_type rcnn \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 128 \
@@ -32,8 +32,8 @@ python train.py \
     --bidirectional \
     --in_channels 1 \
     --out_channels 128 \
-    --kernel_heights 3 4 5
-    --stride 0 \
+    --kernel_heights 3 4 5 \
+    --stride 1 \
     --padding 0 \
     --dropout 0.2 \
     --lr 0.001 \
@@ -54,12 +54,6 @@ python train.py \
     --smoothing \
     --mode train \
     #--checkpoint ./models/accu_43.850.pth \
-
-    # conv2d ? -> 1
-    # kernel_sizes = [(4, 512), (3, 512), (3, 256), (2, 256), (4, 512)]
-    # output_channels = [512, 256, 256, 512, 512]
-    # strides = [(2, 1), (2, 1), (2, 1), (2, 1), (1, 1)]
-    # maxpool_kernel_size = (4, 1)
 
 
 /

@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from modules.utils import rnn_factory, rnn_init
 
+from misc.vocab import PAD_ID
+
 
 class RCNNEncoder(nn.Module):
     def __init__(self,
@@ -47,8 +49,7 @@ class RCNNEncoder(nn.Module):
 
         rnn_init(config.rnn_type, self.rnn)
 
-        self.W2 = nn.Linear(
-            self.hidden_size * self.bidirection_num + self.embedding_size, self.hidden_size)
+        self.W2 = nn.Linear(self.hidden_size * self.bidirection_num + self.embedding_size, self.hidden_size)
 
         self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
 
@@ -68,18 +69,18 @@ class RCNNEncoder(nn.Module):
         embedded = self.dropout(embedded)
 
         print('embedded shape: ', embedded.shape)
-        embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
+        rnn_inputs = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         if hidden_state is not None:
-            outputs, hidden_state = self.rnn(embedded, hidden_state)
+            outputs, hidden_state = self.rnn(rnn_inputs, hidden_state)
         else:
-            outputs, hidden_state = self.rnn(embedded)
+            outputs, hidden_state = self.rnn(rnn_inputs)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=embedded.size(0))
         print('outputs shape: ', outputs.shape)
 
         # [batch_size, max_len, hidden_size + embedding_size]
-        outputs = torch.cat((outputs, inputs), 2).permute(1, 0, 2)
+        outputs = torch.cat((outputs, embedded), dim=2).permute(1, 0, 2)
 
         # [batch_size, max_len, hidden_size]
         outputs = self.W2(outputs)
@@ -89,11 +90,13 @@ class RCNNEncoder(nn.Module):
 
         # [batch_size, hidden_size, 1]
         outputs = F.max_pool1d(outputs, outputs.size(2))
+        print('outputs shape: ', outputs.shape)
 
         # [batch_size, hidden_size]
         outputs = outputs.squeeze(2)
 
         outputs = F.log_softmax(self.linear_final(outputs), dim=1)
+        print('outputs shape: ', outputs.shape)
 
         return outputs, None
 
@@ -114,17 +117,16 @@ class RCNNEncoder(nn.Module):
                           new hidden state.
 
         Tensor Size :
-                                hidden.size() = (batch_size, hidden_size)
-                                attn_weights.size() = (batch_size, num_seq)
-                                soft_attn_weights.size() = (batch_size, num_seq)
-                                new_hidden_state.size() = (batch_size, hidden_size)
+            hidden.size() = (batch_size, hidden_size)
+            attn_weights.size() = (batch_size, num_seq)
+            soft_attn_weights.size() = (batch_size, num_seq)
+            new_hidden_state.size() = (batch_size, hidden_size)
 
         """
 
         hidden = final_state.squeeze(0)
         attn_weights = torch.bmm(lstm_output, hidden.unsqueeze(2)).squeeze(2)
         soft_attn_weights = F.softmax(attn_weights, 1)
-        new_hidden_state = torch.bmm(lstm_output.transpose(
-            1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
+        new_hidden_state = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
 
         return new_hidden_state

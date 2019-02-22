@@ -12,8 +12,7 @@ import torch
 import torch.nn as nn
 
 from modules.rnn_encoder import RNNEncoder
-#  from modules.cnn_encoder import CNNEncoder
-from modules.cnn import CNNEncoder
+from modules.cnn_encoder import CNNEncoder
 from modules.rcnn_encoder import RCNNEncoder
 from modules.self_attention.model import StructuredSelfAttention
 from modules.transformer.model import Transformer
@@ -77,8 +76,9 @@ class SAModel(nn.Module):
             inputs: [max_len, batch_size]
             lengths: [batch_size]
         '''
+        """
         if self.config.model_type.find('transformer') == -1:
-            # [batch_size, n_classes], None or [batch_size, heads, max_len]
+            # [batch_size, n_classes], None or [batch_size, num_heads, max_len]
             outputs, attns = self.encoder(
                 inputs,
                 lengths
@@ -89,8 +89,8 @@ class SAModel(nn.Module):
                 inputs.transpose(0, 1),
                 inputs_pos.transpose(0, 1)
             )
-
         """
+
         if self.config.model_type == 'rnn':
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
@@ -100,11 +100,17 @@ class SAModel(nn.Module):
         elif self.config.model_type == 'cnn':
             # [batch_size, n_classes]
             outputs, attns = self.encoder(
+                inputs.transpose(0, 1),
+                lengths
+            )
+        elif self.config.model_type == 'rcnn':
+            # [batch_size, n_classes], None
+            outputs, attns = self.encoder(
                 inputs,
                 lengths
             )
         elif self.config.model_type == 'self_attention':
-            # [batch_size, n_classes], [batch_size, heads, max_len]
+            # [batch_size, n_classes], [batch_size, num_heads, max_len]
             outputs, attns = self.encoder(
                 inputs,
                 lengths
@@ -116,7 +122,5 @@ class SAModel(nn.Module):
                 inputs.transpose(0, 1),
                 inputs_pos.transpose(0, 1)
             )
-
-        """
 
         return outputs, attns
