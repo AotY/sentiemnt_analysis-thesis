@@ -80,11 +80,13 @@ class Transformer(nn.Module):
         Args:
             inputs: [batch_size, max_len]
             inputs_pos: [batch_size, max_len]
-        return: [batch_size, n_classes], [batch_size, max_len, max_len]
+        return: [batch_size, n_classes], [batch_size * num_heads, max_len, max_len] list
         """
-        # [batch_size, max_len, transformer_size]
+        # [batch_size, max_len, transformer_size] list
         outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
+        # print('attns[0] shape: ', attns[0].shape)
+        # print('attns[-1] shape: ', attns[-1].shape)
 
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
@@ -96,8 +98,7 @@ class Transformer(nn.Module):
             outputs = F.log_softmax(self.linear_final(outputs), dim=1)
         elif self.model_type == 'transformer_rnn':
             outputs, _ = self.rnn(outputs.transpose(0, 1))
-            outputs = self.rnn(outputs)[-1]
-            outputs = F.log_softmax(self.linear_final(outputs), dim=1)
+            outputs = F.log_softmax(self.linear_final(outputs[-1]), dim=1)
         elif self.model_type == 'transformer_weight':
             # [batch_size, max_len, dense_size]
             x = F.tanh(self.linear_first(outputs))

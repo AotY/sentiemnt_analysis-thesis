@@ -271,8 +271,8 @@ def train(epoch):
 
         outputs, attns = model(
             inputs,
-            lengths,
-            inputs_pos
+            lengths=lengths,
+            inputs_pos=inputs_pos
         )
 
         # backward
@@ -324,8 +324,8 @@ def eval(epoch):
 
             outputs, attns = model(
                 inputs,
-                lengths,
-                inputs_pos
+                lengths=lengths,
+                inputs_pos=inputs_pos
             )
 
             # backward
@@ -364,7 +364,7 @@ def test():
         input = input.to(device)
 
         input_pos = torch.LongTensor(pos)
-        input_pos = input.to(device)
+        input_pos = input_pos.to(device)
 
         # unsqueeze batch_size
         inputs = input.unsqueeze(1) # [max_len, 1]
@@ -372,19 +372,22 @@ def test():
 
         print('input: ', input)
 
-        # outputs: [1, n_classes], [1, max_len, max_len] or [1, num_heads, max_len]
+        # outputs: [1, n_classes], [1 * num_heads, max_len, max_len] list or [1, num_heads, max_len]
         outputs, attns = model(
             inputs=inputs,
             inputs_pos=inputs_pos
         )
+
         label = outputs.squeeze(0).topk(1)[1].item()
-        print('attns: ', attns.shape)
-        # attns = attns.squeeze(0) #
+        # print('attns: ', attns.shape)
+
+        print('attns[0]: ', attns[0].shape)
+        print('attns[-1]: ', attns[-1].shape)
 
         print('text: %s, label: %d' % (args.text, label))
         # print('attns: ', attns)
 
-        visualize_attention(attns, ids)
+        # visualize_attention(attns, ids)
         
 
 def visualize_attention(attns, ids):

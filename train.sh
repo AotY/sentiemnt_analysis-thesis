@@ -53,9 +53,9 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --smoothing \
-    --mode train \
-    # --checkpoint ./models/accuracy_92.409.pth \
-    # --text 医生医术不错，但是态度太差了！
+    --mode test \
+    --checkpoint ./models/accuracy_90.844.pth \
+    --text 医生医术不错，但是态度太差了！
 
 
 /

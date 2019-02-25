@@ -74,23 +74,9 @@ class SAModel(nn.Module):
         '''
         Args:
             inputs: [max_len, batch_size]
+            inputs_pos: [max_len, batch_size]
             lengths: [batch_size]
         '''
-        """
-        if self.config.model_type.find('transformer') == -1:
-            # [batch_size, n_classes], None or [batch_size, num_heads, max_len]
-            outputs, attns = self.encoder(
-                inputs,
-                lengths
-            )
-        else:
-            # [batch_size, n_classes], [batch_size, max_len, max_len]
-            outputs, attns = self.encoder(
-                inputs.transpose(0, 1),
-                inputs_pos.transpose(0, 1)
-            )
-        """
-
         if self.config.model_type == 'rnn':
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
@@ -117,7 +103,8 @@ class SAModel(nn.Module):
             )
         #  elif config.model_type in ['transformer', 'transformer_rnn', 'transformer_weight']:
         elif self.config.model_type.find('transformer') != -1:
-            # [batch_size, n_classes], [batch_size, max_len, max_len]
+            # [batch_size, n_classes], [batch_size * num_heads, max_len, max_len] list
+            # print(inputs_pos)
             outputs, attns = self.encoder(
                 inputs.transpose(0, 1),
                 inputs_pos.transpose(0, 1)
