@@ -5,10 +5,10 @@
 # Distributed under terms of the MIT license.
 import pickle
 
-PAD = 'PAD'
-UNK = 'UNK'
-SOS = 'SOS'
-EOS = 'EOS'
+PAD = '<PAD>'
+UNK = '<UNK>'
+SOS = '<SOS>'
+EOS = '<EOS>'
 
 PAD_ID = 0
 UNK_ID = 1
@@ -40,7 +40,6 @@ class Vocab(object):
 
     def words_to_id(self, words):
         word_ids = [self.word_to_id(cur_word) for cur_word in words]
-        #  word_ids = [id for id in word_ids if id != self.unkid]
         return word_ids
 
     '''id to  word'''

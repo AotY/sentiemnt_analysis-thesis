@@ -14,11 +14,11 @@ import torch
 import numpy as np
 
 
-
 def save_distribution(dist_list, save_path):
     with open(os.path.join(save_path), 'w', encoding="utf-8") as f:
         for i, j in dist_list:
             f.write('%s\t%s\n' % (str(i), str(j)))
+
 
 def load_glove_embeddings(path, word2idx, embedding_dim):
     """Loading the glove embeddings"""

@@ -22,12 +22,18 @@ from modules.early_stopping import EarlyStopping
 from sa_model import SAModel
 
 from misc.vocab import Vocab
+from misc.vocab import PAD_ID
+
 from misc.dataset import load_data, build_dataloader
+from misc.tokenizer import Tokenizer
+
+from visualization.self_attention.visualization import create_html
 
 # Parse argument for language to train
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--data_dir', type=str, help='')
+parser.add_argument('--visualization_dir', type=str, help='')
 parser.add_argument('--vocab_path', type=str, help='')
 parser.add_argument('--vocab_size', type=int, help='')
 parser.add_argument('--rnn_type', type=str, help='RNN, LSTM, GRU')
@@ -70,9 +76,11 @@ parser.add_argument('--save_mode', type=str,
 parser.add_argument('--checkpoint', type=str, help='checkpoint path')
 parser.add_argument('--smoothing', action='store_true')
 parser.add_argument('--log', type=str, help='save log.')
+parser.add_argument('--log_mode', type=str, default='w', help='w or a')
 parser.add_argument('--seed', type=str, help='random seed')
 parser.add_argument('--model_type', type=str, help='')
-parser.add_argument('--mode', type=str, help='train, eval, infer')
+parser.add_argument('--mode', type=str, help='train, eval, test')
+parser.add_argument('--text', type=str, default='', help='text for testing.')
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -149,10 +157,11 @@ def train_epochs():
         print('[Info] Training performance will be written to file: {} and {}'.format(
             log_train_file, log_valid_file))
 
-        with open(log_train_file, 'w') as log_tf, \
-                open(log_valid_file, 'w') as log_vf:
-            log_tf.write('epoch, loss, accuracy, recall, f1\n')
-            log_vf.write('epoch, loss, accuracy, recall, f1\n')
+        if args.log_mode == 'w':
+            with open(log_train_file, 'w') as log_tf, \
+                    open(log_valid_file, 'w') as log_vf:
+                log_tf.write('epoch, loss, accuracy, recall, f1\n')
+                log_vf.write('epoch, loss, accuracy, recall, f1\n')
 
     valid_accuracies = []
     for epoch in range(args.start_epoch, args.epochs + 1):
@@ -162,9 +171,9 @@ def train_epochs():
 
         train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
 
-        print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f} %, '
-              'recall: {recall:3.3f} %, f1: {f1: 3.3f} %'
-              'elapse: {elapse:3.3f} min'.format(
+        print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+              'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
+              'elapse: {elapse:3.3f}min'.format(
                   loss=train_loss,
                   accuracy=100*train_accuracy,
                   recall=100*train_recall,
@@ -174,8 +183,8 @@ def train_epochs():
 
         start = time.time()
         valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
-        print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f} %, '
-              'recall: {accuracy:3.3f} %, f1: {f1: 3.3f} %'
+        print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+              'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
               'elapse: {elapse:3.3f} min'.format(
                   loss=valid_loss,
                   accuracy=100*valid_accuracy,
@@ -254,7 +263,7 @@ def train(epoch):
         inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
         # [batch_size, max_len]
         # print('inputs: ', inputs)
-        print('legnths: ', lengths)
+        # print('legnths: ', lengths)
         # print('labels: ', labels)
 
         # forward
@@ -340,6 +349,60 @@ def eval(epoch):
 
     return avg_loss, avg_accuracy, avg_recall, avg_f1
 
+def test():
+    if args.text is None or len(args.text.split()) == 0:
+        raise ValueError('text: %s is invalid' % args.text)
+
+    tokenizer = Tokenizer()
+    with torch.no_grad():
+        tokens = tokenizer.tokenize(args.text)
+        ids = vocab.words_to_id(tokens)
+        ids = ids + [PAD_ID] * (args.max_len - len(ids)) # pad
+        pos = [pos_i + 1 if w_i != PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
+
+        input = torch.LongTensor(ids)
+        input = input.to(device)
+
+        input_pos = torch.LongTensor(pos)
+        input_pos = input.to(device)
+
+        # unsqueeze batch_size
+        inputs = input.unsqueeze(1) # [max_len, 1]
+        inputs_pos = input_pos.unsqueeze(1) # [max_len, 1]
+
+        print('input: ', input)
+
+        # outputs: [1, n_classes], [1, max_len, max_len] or [1, num_heads, max_len]
+        outputs, attns = model(
+            inputs=inputs,
+            inputs_pos=inputs_pos
+        )
+        label = outputs.squeeze(0).topk(1)[1].item()
+        print('attns: ', attns.shape)
+        # attns = attns.squeeze(0) #
+
+        print('text: %s, label: %d' % (args.text, label))
+        # print('attns: ', attns)
+
+        visualize_attention(attns, ids)
+        
+
+def visualize_attention(attns, ids):
+        attns_add = torch.sum(attns, 1) # [batch_size, max_len]
+        attns_add_np = attns_add.data.cpu().numpy()
+        attns_add_list = attns_add_np.tolist()
+
+        texts= []
+        tokens = vocab.ids_to_word(ids)
+        texts.append(' '.join(tokens))
+
+        create_html(
+            texts=texts,
+            weights=attns_add_list,
+            file_name=os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.html')
+        )
+        print("Attention visualization created for {} samples".format(len(texts)))
+
 def cal_performance(pred, gold, smoothing=False):
     ''' Apply label smoothing if needed '''
     # pred: [batch_size, n_classes]
@@ -386,6 +449,11 @@ def cal_loss(pred, gold, smoothing):
 
 if __name__ == '__main__':
     mode = args.mode
+    epochs = args.epochs
+    lr = args.lr
+    dropout = args.dropout
+    text = args.text
+    visualization_dir = args.visualization_dir
 
     if args.checkpoint:
         print('load checkpoint...')
@@ -394,13 +462,11 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['model'])
         optimizer.optimizer.load_state_dict(checkpoint['optimizer'])
 
-        #  early_stopping = checkpoint['early_stopping']
-
         args = checkpoint['settings']
 
         epoch = checkpoint['epoch']
-        args.start_epoch = epoch + 1
 
+        args.start_epoch = epoch + 1
         valid_loss = checkpoint['valid_loss']
         valid_accuracy = checkpoint['valid_accuracy']
         valid_recall = checkpoint['valid_recall']
@@ -418,8 +484,17 @@ if __name__ == '__main__':
         )
 
     args.mode = mode
+    args.epochs = epochs
+    args.lr = lr
+    args.dropout = dropout
+    args.text = text
+    args.visualization_dir = visualization_dir
 
     if args.mode == 'train':
         train_epochs()
     elif args.mode == 'eval':
         eval(epoch)
+    elif args.mode == 'test':
+        test()
+    else:
+        raise ValueError('%s is invalid' % mode)

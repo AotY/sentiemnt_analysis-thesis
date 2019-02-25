@@ -10,7 +10,7 @@ def create_html(texts, weights, file_name):
 	weights: attention weights for visualizing
 	texts: text on which attention weights are to be visualized
     """
-    file_name = "visualization/" + file_name
+    # file_name = "visualization/" + file_name
     f_out = open(file_name, "w", encoding="utf-8")
     part1 = """
     <html lang="en">
@@ -78,9 +78,12 @@ def create_html(texts, weights, file_name):
     }
     </script>
     </html>"""
-    put_quote = lambda x: '\"%s\"' % x
+    put_quote = lambda x: "\"%s\"" % x
+
     texts_string = "var any_text = [%s];\n"%(",".join(map(put_quote, texts)))
-    weights_string = "var trigram_weights = [%s];\n"%(",".join(map(str,weights)))
+
+    weights_string = "var trigram_weights = [%s];\n"%(",".join(map(str, weights)))
+
     f_out.write(part1)
     f_out.write(texts_string)
     f_out.write(weights_string)

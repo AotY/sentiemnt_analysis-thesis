@@ -15,6 +15,7 @@ python train.py \
     --data_path data/cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
+    --visualization_dir visualization/ \
     --log log/ \
     --model_type self_attention \
     --n_classes 3 \
@@ -35,15 +36,15 @@ python train.py \
     --kernel_heights 3 4 5 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.2 \
+    --dropout 0.3 \
     --lr 0.001 \
-    --max_grad_norm 5.0 \
+    --max_grad_norm 2.0 \
     --min_len 5 \
     --max_len 65 \
     --batch_size 32 \
-    --valid_split 0.08 \
-    --test_split 5 \
-    --epochs 30 \
+    --valid_split 0.2 \
+    --test_split 7 \
+    --epochs 5 \
     --start_epoch 1 \
     --lr_patience 3 \
     --es_patience 5 \
@@ -52,8 +53,9 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --smoothing \
-    --mode train \
-    #--checkpoint ./models/accu_43.850.pth \
+    --mode test \
+    --checkpoint ./models/accuracy_92.409.pth \
+    --text 医生医术不错，但是态度太差了！
 
 
 /

@@ -91,7 +91,8 @@ class StructuredSelfAttention(nn.Module):
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
-        embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
+        if lengths is not None:
+            embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         # [max_len, batch_size, hidden_size]
         if hidden_state is None:
@@ -100,10 +101,11 @@ class StructuredSelfAttention(nn.Module):
             outputs, hidden_state = self.rnn(embedded, hidden_state)
 
         # [max_len, batch_size, hidden_size]
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+        if lengths is not None:
+            outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
 
         # [batch_size, max_len, dense_size]
-        x = F.tanh(self.linear_first(outputs.transpose(0, 1)))
+        x = torch.tanh(self.linear_first(outputs.transpose(0, 1)))
         # print('x shape: ', x.shape)
 
         # [batch_size, max_len, num_heads]
@@ -137,7 +139,6 @@ class StructuredSelfAttention(nn.Module):
             #  return output,attention
         #  else:
 
-	#Regularization
     def l2_matrix_norm(self, M):
         """
         M can suffer from redundancy problems if the attention mechanism always provides similar

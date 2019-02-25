@@ -17,7 +17,6 @@ class Tokenizer:
         if userdict_path is not None:
             jieba.load_userdict(userdict_path)
 
-
     def tokenize(self, text):
         if isinstance(text, list):
             text = ' '.join(text)

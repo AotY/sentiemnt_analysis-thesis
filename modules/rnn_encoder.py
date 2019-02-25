@@ -50,7 +50,7 @@ class RNNEncoder(nn.Module):
         self.linear_final = nn.Linear(
             self.hidden_size * self.bidirection_num, self.n_classes)
 
-    def forward(self, inputs, lengths, hidden_state=None):
+    def forward(self, inputs, lengths=None, hidden_state=None):
         '''
         params:
             inputs: [seq_len, batch_size]  LongTensor
@@ -58,22 +58,23 @@ class RNNEncoder(nn.Module):
         :return
             outputs: [batch_size, n_classes]
         '''
-        if lengths is None:
-            raise ValueError('lengths is none.')
 
         # embedded
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
         print('embedded shape: ', embedded.shape)
-        embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
+        if lengths is not None:
+            embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         if hidden_state is not None:
             outputs, hidden_state = self.rnn(embedded, hidden_state)
         else:
             outputs, hidden_state = self.rnn(embedded)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+        if lengths is not None:
+            outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+
         print('outputs shape: ', outputs.shape)
 
         if self.model_type == 'rnn_attention':

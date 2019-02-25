@@ -69,8 +69,8 @@ class SAModel(nn.Module):
 
     def forward(self,
                 inputs,
-                lengths,
-                inputs_pos):
+                lengths=None,
+                inputs_pos=None):
         '''
         Args:
             inputs: [max_len, batch_size]
@@ -124,3 +124,6 @@ class SAModel(nn.Module):
             )
 
         return outputs, attns
+    
+    def test(self, input, input_pos):
+        pass

@@ -53,7 +53,7 @@ class RCNNEncoder(nn.Module):
 
         self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
 
-    def forward(self, inputs, lengths, hidden_state=None):
+    def forward(self, inputs, lengths=None, hidden_state=None):
         '''
         params:
             inputs: [seq_len, batch_size]  LongTensor
@@ -61,22 +61,21 @@ class RCNNEncoder(nn.Module):
         :return
             outputs: [batch_size, n_classes]
         '''
-        if lengths is None:
-            raise ValueError('lengths is none.')
-
         # embedded
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
         print('embedded shape: ', embedded.shape)
-        rnn_inputs = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
+        if lengths is not None:
+            rnn_inputs = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
         if hidden_state is not None:
             outputs, hidden_state = self.rnn(rnn_inputs, hidden_state)
         else:
             outputs, hidden_state = self.rnn(rnn_inputs)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=embedded.size(0))
+        if lengths is not None:
+            outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=embedded.size(0))
         print('outputs shape: ', outputs.shape)
 
         # [batch_size, max_len, hidden_size + embedding_size]
