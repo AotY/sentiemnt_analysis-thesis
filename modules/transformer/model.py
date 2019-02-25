@@ -62,17 +62,14 @@ class Transformer(nn.Module):
             )
         elif self.model_type == 'transformer_weight':
             # W_s1
-            self.linear_first = torch.nn.Linear(
-                self.transformer_size, config.dense_size)
+            self.linear_first = torch.nn.Linear(self.transformer_size, config.dense_size)
             self.linear_first.bias.data.fill_(0)
 
             # W_s2
-            self.linear_second = torch.nn.Linear(
-                config.dense_size, config.heads)
+            self.linear_second = torch.nn.Linear(config.dense_size, config.heads)
             self.linear_second.bias.data.fill_(0)
 
-            self.linear_final = nn.Linear(
-                config.max_len * config.heads, self.n_classes)
+            self.linear_final = nn.Linear(config.max_len * config.heads, self.n_classes)
 
         nn.init.xavier_normal_(self.linear_final.weight)
 
@@ -109,8 +106,7 @@ class Transformer(nn.Module):
             x = self.linear_second(outputs)
 
             # [batch_size, n_classes]
-            outputs = F.log_softmax(
-                self.linear_final(x.view(x.size(0), -1)), dim=1)
+            outputs = F.log_softmax(self.linear_final(x.view(x.size(0), -1)), dim=1)
 
         # [batch_size, vocab_size]
         return outputs, attns

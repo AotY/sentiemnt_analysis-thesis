@@ -17,7 +17,7 @@ python train.py \
     --data_dir data/ \
     --visualization_dir visualization/ \
     --log log/ \
-    --model_type self_attention \
+    --model_type transformer_rnn \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 128 \
@@ -53,9 +53,9 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --smoothing \
-    --mode test \
-    --checkpoint ./models/accuracy_92.409.pth \
-    --text 医生医术不错，但是态度太差了！
+    --mode train \
+    # --checkpoint ./models/accuracy_92.409.pth \
+    # --text 医生医术不错，但是态度太差了！
 
 
 /
