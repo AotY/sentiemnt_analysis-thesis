@@ -120,6 +120,8 @@ class StructuredSelfAttention(nn.Module):
         # print('attns shape: ', attns.shape)
 
         # [batch_size, num_heads, hidden_size]
+        # Hidden states are weighted by an attention vector (A’s) to obtain a
+        # refined sentence representation (M in the paper).
         sentence_embeddings = attns @ outputs.transpose(0, 1)
 
         # [batch_size, hidden_size]
@@ -136,16 +138,43 @@ class StructuredSelfAttention(nn.Module):
         #  else:
 
 	#Regularization
-    def l2_matrix_norm(self,m):
+    def l2_matrix_norm(self, M):
         """
-        Frobenius norm calculation
+        M can suffer from redundancy problems if the attention mechanism always provides similar
+        summation weights for all the r hops.
+
+        We use the dot product of A and its transpose, subtracted by an identity matrix.
+
+        This penalization term P will be multiplied by a coefficient, and we minimize it together
+        with the original loss, which is dependent on the downstream application.
+
+        In the most extreme case, where there is no overlap between the two probability
+        distributions ai and aj, the correspond aij will be 0. Otherwise, it will have a
+        positive value.
+
+        On the other extreme end, if the two distribution are identical and all concentrates
+        on one single word, it will have a maximum value of 1.
+
+        We subtract an identity matrix from AAT so that forces the elements on the diagonal
+        of AAT to approximate 1, which encourages each summation vector ai to focus on as
+        few number of words as possible, forcing all other elements to 0, which punishes
+        redundancy between different summation vectors.
+
+        This penalty encourages the self-attention matrix to have large values on its diagonal
+        and it lets single attention weights for a given token dominates other (r-1) attention weights.
+
+        为了使每一个分布关注的地方不一样（每一行即是一个分布）, 对角线元素的最大值为1，其他元素的最小值为0,
+        这个惩罚的目的是为了让对角线元素尽量接近1
+
+        in order to make each distributions different (each row)
+
+        Frobenius norm calculation, similar to an L2 regularization term.
 
         Args:
-           m: {Variable} ||AAT - I||
-
+           M:  ||AAT - I||
         Returns:
             regularized value
 
         """
-        return torch.sum(torch.sum(torch.sum(m**2, 1), 1) ** 0.5).type(torch.DoubleTensor)
+        return torch.sum(torch.sum(torch.sum(M**2, 1), 1) ** 0.5).type(torch.DoubleTensor)
 

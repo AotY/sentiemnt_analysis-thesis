@@ -10,10 +10,28 @@ Utils
 import os
 import sys
 
+import torch
+import numpy as np
+
 
 
 def save_distribution(dist_list, save_path):
     with open(os.path.join(save_path), 'w', encoding="utf-8") as f:
         for i, j in dist_list:
             f.write('%s\t%s\n' % (str(i), str(j)))
+
+def load_glove_embeddings(path, word2idx, embedding_dim):
+    """Loading the glove embeddings"""
+    with open(path) as f:
+        embeddings = np.zeros((len(word2idx), embedding_dim))
+        for line in f.readlines():
+            values = line.split()
+            word = values[0]
+            index = word2idx.get(word)
+            if index:
+                vector = np.array(values[1:], dtype='float32')
+                if vector.shape[-1] != embedding_dim:
+                    raise Exception('Dimension not matching.')
+                embeddings[index] = vector
+        return torch.from_numpy(embeddings).float()
 

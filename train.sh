@@ -16,7 +16,7 @@ python train.py \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --log log/ \
-    --model_type rcnn \
+    --model_type self_attention \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 128 \

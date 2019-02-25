@@ -1,18 +1,4 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-#Credits to Lin Zhouhan(@hantek) for the complete visualization code
 
-import random, os, numpy, scipy
-from codecs import open
-def createHTML(texts, weights, fileName):
-    """
-    Creates a html file with text heat.
-	weights: attention weights for visualizing
-	texts: text on which attention weights are to be visualized
-    """
-    fileName = "visualization/"+fileName
-    fOut = open(fileName, "w", encoding="utf-8")
-    part1 = """
     <html lang="en">
     <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -28,8 +14,9 @@ def createHTML(texts, weights, fileName):
     </h3>
     </body>
     <script>
-    """
-    part2 = """
+    var any_text = ["你","真","好","看","。"];
+var trigram_weights = [tensor([0.1536, 0.2740, 0.1531, 0.2386, 0.1806]),tensor([0.2248, 0.1572, 0.1649, 0.2536, 0.1995]),tensor([0.2032, 0.2254, 0.1597, 0.1785, 0.2332]),tensor([0.2262, 0.1662, 0.1830, 0.1668, 0.2577]),tensor([0.1804, 0.2504, 0.2623, 0.1074, 0.1995])];
+
     var color = "255,0,0";
     var ngram_length = 3;
     var half_ngram = 1;
@@ -77,15 +64,4 @@ def createHTML(texts, weights, fileName):
     document.body.innerHTML += heat_text;
     }
     </script>
-    </html>"""
-    putQuote = lambda x: "\"%s\""%x
-    textsString = "var any_text = [%s];\n"%(",".join(map(putQuote, texts)))
-    weightsString = "var trigram_weights = [%s];\n"%(",".join(map(str,weights)))
-    fOut.write(part1)
-    fOut.write(textsString)
-    fOut.write(weightsString)
-    fOut.write(part2)
-    fOut.close()
-
-    return
-
+    </html>

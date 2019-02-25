@@ -37,6 +37,8 @@ def cleaning_stats():
     len_dict = {}
     freq_dict = Counter()
 
+    label_dict = Counter()
+
     cleaned_file = open(args.cleaned_path, 'w', encoding='utf-8')
     cleaned_datas = list()
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
@@ -80,6 +82,8 @@ def cleaning_stats():
                     else:
                         raise ValueError('score: %s is not valid.' % score)
 
+                    label_dict.update(str(label))
+
                     tokens = tokenizer.tokenize(text)
                     freq_dict.update(tokens)
                     len_dict[len(tokens)] = len_dict.get(len(tokens), 0) + 1
@@ -103,11 +107,11 @@ def cleaning_stats():
 
     cleaned_file.close()
 
-    return freq_dict, len_dict
+    return freq_dict, len_dict, label_dict
 
 
 def main():
-    freq_dict, len_dict = cleaning_stats()
+    freq_dict, len_dict, label_dict = cleaning_stats()
     freq_list = sorted(freq_dict.items(),
                        key=lambda item: item[1], reverse=True)
     save_distribution(freq_list, args.vocab_freq_path)
@@ -115,6 +119,10 @@ def main():
     len_list = sorted(len_dict.items(),
                       key=lambda item: item[0], reverse=False)
     save_distribution(len_list, os.path.join(args.save_dir, 'len.dist'))
+
+    label_list = sorted(label_dict.items(),
+                      key=lambda item: item[1], reverse=False)
+    save_distribution(label_list, os.path.join(args.save_dir, 'label.dist'))
 
 
 if __name__ == '__main__':
