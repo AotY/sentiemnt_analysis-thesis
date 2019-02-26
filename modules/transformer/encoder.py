@@ -17,29 +17,23 @@ from misc.vocab import PAD_ID
 class Encoder(nn.Module):
     ''' A encoder model with self attention mechanism. '''
 
-    def __init__(
-            self,
-            config,
-            embedding,
-            has_position=True):
-
+    def __init__(self, config, embedding):
         super(Encoder, self).__init__()
 
         self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
 
-        self.has_position = has_position
+        self.use_pos = config.use_pos
 
         self.dropout = nn.Dropout(config.dropout)
 
-        if has_position:
-            n_position = config.max_len + 1
-            self.pos_embedding = nn.Embedding.from_pretrained(
-                get_sinusoid_encoding_table(n_position,
-                                            self.embedding_size,
-                                            padid=PAD_ID),
-                freeze=True
-            )
+        n_position = config.max_len + 1
+        self.pos_embedding = nn.Embedding.from_pretrained(
+            get_sinusoid_encoding_table(n_position,
+                                        self.embedding_size,
+                                        padid=PAD_ID),
+            freeze=True
+        )
 
         self.layer_stack = nn.ModuleList([
             EncoderLayer(config) for _ in range(config.t_num_layers)]
@@ -54,7 +48,10 @@ class Encoder(nn.Module):
             enc_inputs: [batch_size, max_len]
             enc_inputs_pos: [batch_size, max_len]
         return:
-            enc_outputs: [batch_size, max_len, transformer_size]
+            enc_outputs: [batch_size, max_len, embedding_size]
+            enc_slf_attn_list: [
+                [num_heads * batch_size, max_len, max_len],
+            ]
         """
         # print('enc_inputs: ', enc_inputs.shape)
         # print('enc_inputs_pos: ', enc_inputs_pos.shape)
@@ -73,12 +70,11 @@ class Encoder(nn.Module):
         # dropout, default: 0.1
         enc_embedded = self.dropout(enc_embedded)
 
-        pos_embedded = self.pos_embedding(enc_inputs_pos).to(enc_inputs.device)
-        # print('enc_embedded: ', enc_embedded.shape)
-        # print('pos_embedded: ', pos_embedded.shape)
-        enc_embedded = enc_embedded + pos_embedded
-
-        # print('enc_embedded shape: ', enc_embedded.shape) # [b, max_len, embedding_size]
+        if self.use_pos:
+            pos_embedded = self.pos_embedding(enc_inputs_pos).to(enc_inputs.device)
+            # print('enc_embedded: ', enc_embedded.shape)
+            # print('pos_embedded: ', pos_embedded.shape)
+            enc_embedded = enc_embedded + pos_embedded
 
         enc_outputs = enc_embedded
         for layer in self.layer_stack:
@@ -95,5 +91,5 @@ class Encoder(nn.Module):
         if return_attns:
             return enc_outputs, enc_slf_attn_list
 
-        # [batch_size, max_len, transformer_size]
+        # [batch_size, max_len, embedding_size]
         return enc_outputs

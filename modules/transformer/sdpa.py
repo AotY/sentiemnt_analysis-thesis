@@ -23,24 +23,30 @@ class ScaleDotProductAttention(nn.Module):
     def forward(self, q, k, v, mask=None):
         """
         Args:
-            q: [b, q_len, ]
-            k: [b, k_len, ]
-            v: [b, v_len, ]
+            q: [num_heads * batch_size, len_q, k_size]
+            k: [num_heads * batch_size, len_k, k_size]
+            v: [num_heads * batch_size, len_v, v_size]
+
+        Returns:
+            outputs: [num_heads * batch_size, len_q, v_size]
+            attns: [num_heads * batch_size, len_q, len_k]
+
         """
-        attn = torch.bmm(q, k.transpose(1, 2))
-        attn = attn / self.temperature
+        # [num_heads*batch_size, len_q, len_k]
+        attns = torch.bmm(q, k.transpose(1, 2))
+        attns = attns / self.temperature
 
         if mask is not None:
-            attn.data.masked_fill(mask, -float('inf'))
-            #  attn = attn.masked_fill(mask, -np.inf)
-            #  attn.data.masked_fill_(1 - mask, -float('inf'))
+            attns.data.masked_fill(mask, -float('inf'))
+            #  attns = attns.masked_fill(mask, -np.inf)
+            #  attns.data.masked_fill_(1 - mask, -float('inf'))
 
-        # [b, q_len, k_len]
-        attn = self.softmax(attn)
-        attn = self.dropout(attn)
+        # [num_heads*batch_size, len_q, len_k]
+        attns = self.softmax(attns)
+        attns = self.dropout(attns)
 
-        # [b, q_len, h]
-        output = torch.bmm(attn, v)
+        # [num_heads*batch_size, len_q, v_size]
+        output = torch.bmm(attns, v)
 
-        return output, attn
+        return output, attns
 

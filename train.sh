@@ -31,6 +31,7 @@ python train.py \
     --dense_size 128 \
     --num_heads 6 \
     --bidirectional \
+    --use_pos \
     --in_channels 1 \
     --out_channels 128 \
     --kernel_heights 3 4 5 \

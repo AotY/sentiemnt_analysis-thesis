@@ -35,8 +35,8 @@ class EncoderLayer(nn.Module):
                 attn_mask=None):
         """
         Args:
-            enc_input: [batch_size, max_len, transformer_size]
-            non_pad_mask: [batch_size, max_len, transformer_size]
+            enc_input: [batch_size, max_len, embedding_size]
+            non_pad_mask: [batch_size, max_len, embedding_size]
             attn_mask: [batch_size, max_len, 1]
         """
         # print('enc_input: ', enc_input.shape)

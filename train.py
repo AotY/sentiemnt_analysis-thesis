@@ -16,6 +16,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 
+import matplotlib.pyplot as plt
+
 from modules.optim import ScheduledOptimizer
 from modules.early_stopping import EarlyStopping
 
@@ -28,6 +30,7 @@ from misc.dataset import load_data, build_dataloader
 from misc.tokenizer import Tokenizer
 
 from visualization.self_attention.visualization import create_html
+from visualization.transformer import seaborn_draw
 
 # Parse argument for language to train
 parser = argparse.ArgumentParser()
@@ -40,6 +43,7 @@ parser.add_argument('--rnn_type', type=str, help='RNN, LSTM, GRU')
 parser.add_argument('--embedding_size', type=int)
 parser.add_argument('--hidden_size', type=int)
 parser.add_argument('--bidirectional', action='store_true')
+parser.add_argument('--use_pos', action='store_true')
 parser.add_argument('--num_layers', type=int)
 parser.add_argument('--transformer_size', type=int)
 parser.add_argument('--inner_hidden_size', type=int)
@@ -145,6 +149,7 @@ early_stopping = EarlyStopping(
 
 # train epochs
 
+
 def train_epochs():
     ''' Start training '''
     log_train_file = None
@@ -213,7 +218,8 @@ def train_epochs():
             if args.save_mode == 'all':
                 model_name = os.path.join(
                     args.save_model,
-                    'accuracy_{accuracy:3.3f}.pth'.format(accuracy=100*valid_accuracy)
+                    'accuracy_{accuracy:3.3f}.pth'.format(
+                        accuracy=100*valid_accuracy)
                 )
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
@@ -245,6 +251,7 @@ def train_epochs():
 
 # train
 
+
 def train(epoch):
     ''' Epoch operation in training phase'''
     model.train()
@@ -260,7 +267,8 @@ def train(epoch):
             desc=' (Training: %d) ' % epoch, leave=False):
 
         # prepare data
-        inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
+        inputs, lengths, labels, inputs_pos = map(
+            lambda x: x.to(device), batch)
         # [batch_size, max_len]
         # print('inputs: ', inputs)
         # print('legnths: ', lengths)
@@ -317,7 +325,8 @@ def eval(epoch):
                 valid_data, mininterval=2,
                 desc=' (Validation: %d) ' % epoch, leave=False):
 
-            inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
+            inputs, lengths, labels, inputs_pos = map(
+                lambda x: x.to(device), batch)
             # print('inputs: ', inputs)
             # print('legnths: ', lengths)
             # print('labels: ', labels)
@@ -349,6 +358,7 @@ def eval(epoch):
 
     return avg_loss, avg_accuracy, avg_recall, avg_f1
 
+
 def test():
     if args.text is None or len(args.text.split()) == 0:
         raise ValueError('text: %s is invalid' % args.text)
@@ -357,8 +367,9 @@ def test():
     with torch.no_grad():
         tokens = tokenizer.tokenize(args.text)
         ids = vocab.words_to_id(tokens)
-        ids = ids + [PAD_ID] * (args.max_len - len(ids)) # pad
-        pos = [pos_i + 1 if w_i != PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
+        ids = ids + [PAD_ID] * (args.max_len - len(ids))  # pad
+        pos = [pos_i + 1 if w_i !=
+               PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
 
         input = torch.LongTensor(ids)
         input = input.to(device)
@@ -367,12 +378,12 @@ def test():
         input_pos = input_pos.to(device)
 
         # unsqueeze batch_size
-        inputs = input.unsqueeze(1) # [max_len, 1]
-        inputs_pos = input_pos.unsqueeze(1) # [max_len, 1]
+        inputs = input.unsqueeze(1)  # [max_len, 1]
+        inputs_pos = input_pos.unsqueeze(1)  # [max_len, 1]
 
         print('input: ', input)
 
-        # outputs: [1, n_classes], [1 * num_heads, max_len, max_len] list or [1, num_heads, max_len]
+        # outputs: [1, n_classes], [num_heads * 1, max_len, max_len] list or [1, num_heads, max_len]
         outputs, attns = model(
             inputs=inputs,
             inputs_pos=inputs_pos
@@ -381,30 +392,46 @@ def test():
         label = outputs.squeeze(0).topk(1)[1].item()
         # print('attns: ', attns.shape)
 
+        print('len(attns): ', len(attns))
         print('attns[0]: ', attns[0].shape)
-        print('attns[-1]: ', attns[-1].shape)
+        #  print('attns[-1]: ', attns[-1].shape)
 
         print('text: %s, label: %d' % (args.text, label))
         # print('attns: ', attns)
 
+        for layer in range(args.t_num_layers):
+            fig, axs = plt.subplots(1, args.num_heads, figsize=(20, 10))
+            print("self attn Layer: ", layer + 1)
+            for h in range(args.num_heads):
+                seaborn_draw.draw(
+                    attns[layer][h].data.cpu().numpy(),
+                    tokens,
+                    tokens if h == 0 else [],
+                    ax=axs[h]
+                )
+        #  plt.show()
+        plt.savefig(os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.png'))
+
         # visualize_attention(attns, ids)
-        
+
 
 def visualize_attention(attns, ids):
-        attns_add = torch.sum(attns, 1) # [batch_size, max_len]
-        attns_add_np = attns_add.data.cpu().numpy()
-        attns_add_list = attns_add_np.tolist()
+    attns_add = torch.sum(attns, 1)  # [batch_size, max_len]
+    attns_add_np = attns_add.data.cpu().numpy()
+    attns_add_list = attns_add_np.tolist()
 
-        texts= []
-        tokens = vocab.ids_to_word(ids)
-        texts.append(' '.join(tokens))
+    texts = []
+    tokens = vocab.ids_to_word(ids)
+    texts.append(' '.join(tokens))
 
-        create_html(
-            texts=texts,
-            weights=attns_add_list,
-            file_name=os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.html')
-        )
-        print("Attention visualization created for {} samples".format(len(texts)))
+    create_html(
+        texts=texts,
+        weights=attns_add_list,
+        file_name=os.path.join(args.visualization_dir,
+                               args.text.replace(' ', '') + '.html')
+    )
+    print("Attention visualization created for {} samples".format(len(texts)))
+
 
 def cal_performance(pred, gold, smoothing=False):
     ''' Apply label smoothing if needed '''

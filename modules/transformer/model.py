@@ -23,7 +23,8 @@ class Transformer(nn.Module):
 
         self.model_type = config.model_type
         self.n_classes = config.n_classes
-        self.transformer_size = config.transformer_size
+
+        #  self.transformer_size = config.transformer_size
         self.max_len = config.max_len
 
         self.encoder = Encoder(
@@ -33,23 +34,23 @@ class Transformer(nn.Module):
 
         if self.model_type == 'transformer':
             self.linear_final = nn.Linear(
-                self.transformer_size * self.max_len,
+                self.embedding_size * self.max_len,
                 self.n_classes,
             )
         elif self.model_type == 'transformer_mean':
             self.linear_final = nn.Linear(
-                self.transformer_size,
+                self.embedding_size,
                 self.n_classes,
             )
 
         elif self.model_type == 'transformer_rnn':
             self.bidirection_num = 2 if config.bidirectional else 1
-            self.hidden_size = self.transformer_size // self.bidirection_num
+            self.hidden_size = self.embedding_size // self.bidirection_num
 
             # rnn
             self.rnn = rnn_factory(
                 rnn_type=config.rnn_type,
-                input_size=self.transformer_size,
+                input_size=self.embedding_size,
                 hidden_size=self.hidden_size,
                 num_layers=config.num_layers,
                 bidirectional=config.bidirectional,
@@ -62,7 +63,7 @@ class Transformer(nn.Module):
             )
         elif self.model_type == 'transformer_weight':
             # W_s1
-            self.linear_first = torch.nn.Linear(self.transformer_size, config.dense_size)
+            self.linear_first = torch.nn.Linear(self.embedding_size, config.dense_size)
             self.linear_first.bias.data.fill_(0)
 
             # W_s2
@@ -82,7 +83,7 @@ class Transformer(nn.Module):
             inputs_pos: [batch_size, max_len]
         return: [batch_size, n_classes], [batch_size * num_heads, max_len, max_len] list
         """
-        # [batch_size, max_len, transformer_size] list
+        # [batch_size, max_len, embedding_size] list
         outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
         # print('outputs shape: ', outputs.shape)
         # print('attns[0] shape: ', attns[0].shape)
@@ -90,7 +91,7 @@ class Transformer(nn.Module):
 
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
-            # [batch_size, max_len * transformer_size]
+            # [batch_size, max_len * embedding_size]
             outputs = outputs.view(outputs.size(0), -1)
             outputs = F.log_softmax(self.linear_final(outputs), dim=1)
         elif self.model_type == 'transformer_mean':

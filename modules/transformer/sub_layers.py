@@ -32,7 +32,7 @@ class  MultiHeadAttention(nn.Module):
         init_wt_normal(self.v_linear.weight, (config.embedding_size + config.v_size))
 
         self.attention = ScaleDotProductAttention(
-            temperature=np.power(config.k_size, 0.5), 
+            temperature=np.power(config.k_size, 0.5),
             dropout=config.dropout
         )
 
@@ -51,6 +51,10 @@ class  MultiHeadAttention(nn.Module):
             k: [batch_size, max_len, embedding_size]
             v: [batch_size, max_len, embedding_size]
             mask: [batch_size, max_len,embedding_size]
+        Returns:
+            outputs: [batch_size, len_q, embedding_size]
+            attns: [num_heads * batch_size, len_q, len_k]
+
         """
         residual = q
 
@@ -66,6 +70,7 @@ class  MultiHeadAttention(nn.Module):
         #  print('k size: ', k.shape)
         #  print('v size: ', v.shape)
 
+        # [num_heads, batch_size, len, k] -> [num_heads * batch_, len, k]
         q = q.permute(2, 0, 1, 3).contiguous().view(-1, len_q, self.k_size) # # (n*b) x lq x dk
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, self.k_size)
         v = v.permute(2, 0, 1, 3).contiguous().view(-1, len_v, self.v_size)
@@ -74,17 +79,23 @@ class  MultiHeadAttention(nn.Module):
         #  print('v size: ', v.shape)
 
         mask = mask.repeat(self.num_heads, 1, 1) # (n*b) x .. x ..
-        output, sdp_attn_weight = self.attention(q, k, v, mask=mask)
 
-        output = output.view(self.num_heads, batch_size, len_q, self.v_size)
-        output = output.permute(1, 2, 0, 3).contiguous().view(batch_size, len_q, -1)
+        #  outputs: [num_heads * batch_size, len_q, v_size]
+        #  attns: [num_heads * batch_size, len_q, len_k]
+        outputs, attns = self.attention(q, k, v, mask=mask)
 
-        output = self.fc(output)
-        output = self.dropout(output)
+        outputs = outputs.view(self.num_heads, batch_size, len_q, self.v_size)
 
-        output = self.layer_norm(output + residual)
+        # [batch_size, len_q, num_heads * v_size]
+        outputs = outputs.permute(1, 2, 0, 3).contiguous().view(batch_size, len_q, -1)
 
-        return output, sdp_attn_weight
+        # [batch_sizes, len_q, embedding_size]
+        outputs = self.fc(outputs)
+        outputs = self.dropout(outputs)
+
+        outputs = self.layer_norm(outputs + residual)
+
+        return outputs, attns
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -97,31 +108,33 @@ class PositionwiseFeedForward(nn.Module):
         self.cnn2 = nn.Conv1d(config.inner_hidden_size, config.embedding_size, 1) # position wise
 
         self.layer_norm = nn.LayerNorm(config.embedding_size)
-
         self.dropout = nn.Dropout(config.dropout)
 
-    def forward(self, input):
+    def forward(self, inputs):
         """
         Args:
-            input: [batch_size, max_len, embedding_size]
-        Return: [batch_size, max_len, embedding_size]
+            inputs: [batch_size, max_len, embedding_size]
+        Return: 
+            outputs: [batch_size, max_len, embedding_size]
         """
+        residual = inputs
 
-        #  print('sub_layer pff input: ', input.shape)
-        residual = input
-        output = input.transpose(1, 2)
+        # [batch_size, embedding_size, max_len]
+        outputs = inputs.transpose(1, 2)
 
-        output = self.cnn1(output)
-        output = torch.relu(output)
-        output = self.cnn2(output)
+        # [batch_size, inner_hidden_size, max_len]
+        outputs = self.cnn1(outputs)
+        outputs = torch.relu(outputs)
 
-        output = output.transpose(1, 2)
+        # [batch_size, embedding_size, max_len]
+        outputs = self.cnn2(outputs)
 
-        output = self.dropout(output)
+        # [batch_size, max_len, embedding_size]
+        outputs = outputs.transpose(1, 2)
 
-        output = self.layer_norm(output + residual)
-        #  print('sub_layer pff output: ', output.shape)
+        outputs = self.dropout(outputs)
 
-        return output
+        outputs = self.layer_norm(outputs + residual)
 
+        return outputs
 
