@@ -1,0 +1,67 @@
+
+    <html lang="en">
+    <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <style>
+    body {
+    font-family: Sans-Serif;
+    }
+    </style>
+    </head>
+    <body>
+    <h3>
+    Heatmaps
+    </h3>
+    </body>
+    <script>
+    var any_text = ["医生 医术 很 恶心 ， 而且 态度 太差 了 <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD>"];
+var trigram_weights = [[0.05887759476900101, 0.1598297506570816, 0.18367208540439606, 0.18261465430259705, 0.19715182483196259, 0.1532263159751892, 0.15968090295791626, 0.1547420769929886, 0.15364161133766174, 0.15266183018684387, 0.14935708045959473, 0.13855141401290894, 0.14522844552993774, 0.1341153383255005, 0.12821224331855774, 0.1328517496585846, 0.11613010615110397, 0.12439088523387909, 0.11234089732170105, 0.10725180059671402, 0.10174429416656494, 0.10769753158092499, 0.09550614655017853, 0.09074359387159348, 0.09365823864936829, 0.09065093100070953, 0.08736436069011688, 0.08973167836666107, 0.08222029358148575, 0.09241373836994171, 0.0911484956741333, 0.08170880377292633, 0.07798101007938385, 0.0806538313627243, 0.06827588379383087, 0.07277240604162216, 0.07121989130973816, 0.06543498486280441, 0.06726929545402527, 0.06862933933734894, 0.07015998661518097, 0.07148956507444382, 0.07514817267656326, 0.0677410364151001, 0.07272163033485413, 0.06995565444231033, 0.06787892431020737, 0.06542833894491196, 0.057722531259059906, 0.053200848400592804, 0.05171488970518112, 0.0503111369907856, 0.04952333867549896, 0.04482922703027725, 0.046947821974754333, 0.0472276397049427, 0.05652681365609169, 0.057591043412685394, 0.06227416917681694, 0.06904523074626923, 0.07377196848392487, 0.06770800054073334, 0.059903744608163834, 0.04216598719358444, 0.027658890932798386]];
+
+    var color = "255,0,0";
+    var ngram_length = 3;
+    var half_ngram = 1;
+    for (var k=0; k < any_text.length; k++) {
+    var tokens = any_text[k].split(" ");
+    var intensity = new Array(tokens.length);
+    var max_intensity = Number.MIN_SAFE_INTEGER;
+    var min_intensity = Number.MAX_SAFE_INTEGER;
+    for (var i = 0; i < intensity.length; i++) {
+    intensity[i] = 0.0;
+    for (var j = -half_ngram; j < ngram_length-half_ngram; j++) {
+    if (i+j < intensity.length && i+j > -1) {
+    intensity[i] += trigram_weights[k][i + j];
+    }
+    }
+    if (i == 0 || i == intensity.length-1) {
+    intensity[i] /= 2.0;
+    } else {
+    intensity[i] /= 3.0;
+    }
+    if (intensity[i] > max_intensity) {
+    max_intensity = intensity[i];
+    }
+    if (intensity[i] < min_intensity) {
+    min_intensity = intensity[i];
+    }
+    }
+    var denominator = max_intensity - min_intensity;
+    for (var i = 0; i < intensity.length; i++) {
+    intensity[i] = (intensity[i] - min_intensity) / denominator;
+    }
+    if (k%2 == 0) {
+    var heat_text = "<p><br><b>Example:</b><br>";
+    } else {
+    var heat_text = "<b>Example:</b><br>";
+    }
+    var space = "";
+    for (var i = 0; i < tokens.length; i++) {
+    heat_text += "<span style='background-color:rgba(" + color + "," + intensity[i] + ")'>" + space + tokens[i] + "</span>";
+    if (space == "") {
+    space = " ";
+    }
+    }
+    //heat_text += "<p>";
+    document.body.innerHTML += heat_text;
+    }
+    </script>
+    </html>

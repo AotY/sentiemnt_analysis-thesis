@@ -17,7 +17,7 @@ python train.py \
     --data_dir data/ \
     --visualization_dir visualization/ \
     --log log/ \
-    --model_type transformer_rnn \
+    --model_type self_attention \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 128 \
@@ -31,21 +31,20 @@ python train.py \
     --dense_size 128 \
     --num_heads 6 \
     --bidirectional \
-    --use_pos \
     --in_channels 1 \
     --out_channels 128 \
     --kernel_heights 3 4 5 \
     --stride 1 \
     --padding 0 \
     --dropout 0.3 \
-    --lr 0.001 \
+    --lr 0.0001 \
     --max_grad_norm 2.0 \
     --min_len 5 \
     --max_len 65 \
     --batch_size 32 \
     --valid_split 0.2 \
     --test_split 7 \
-    --epochs 5 \
+    --epochs 15 \
     --start_epoch 1 \
     --lr_patience 3 \
     --es_patience 5 \
@@ -54,9 +53,10 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --smoothing \
-    --mode test \
-    --checkpoint ./models/accuracy_90.844.pth \
-    --text 医生医术不错，但是态度太差了！
+    --mode train \
+    #--checkpoint ./models/accuracy_93.688.pth \
+    #--text 医生医术很恶心，而且态度太差了
+    #--use_pos \
 
 
 /

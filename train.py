@@ -381,41 +381,33 @@ def test():
         inputs = input.unsqueeze(1)  # [max_len, 1]
         inputs_pos = input_pos.unsqueeze(1)  # [max_len, 1]
 
-        print('input: ', input)
+        # print('input: ', input)
 
         # outputs: [1, n_classes], [num_heads * 1, max_len, max_len] list or [1, num_heads, max_len]
         outputs, attns = model(
             inputs=inputs,
             inputs_pos=inputs_pos
         )
+        print('outputs: ', outputs)
 
         label = outputs.squeeze(0).topk(1)[1].item()
         # print('attns: ', attns.shape)
 
-        print('len(attns): ', len(attns))
-        print('attns[0]: ', attns[0].shape)
-        #  print('attns[-1]: ', attns[-1].shape)
+        # print('len(attns): ', len(attns))
+        # print('attns[0]: ', attns[0].shape)
+        # print('attns[-1]: ', attns[-1].shape)
 
         print('text: %s, label: %d' % (args.text, label))
         # print('attns: ', attns)
 
-        for layer in range(args.t_num_layers):
-            fig, axs = plt.subplots(1, args.num_heads, figsize=(20, 10))
-            print("self attn Layer: ", layer + 1)
-            for h in range(args.num_heads):
-                seaborn_draw.draw(
-                    attns[layer][h].data.cpu().numpy(),
-                    tokens,
-                    tokens if h == 0 else [],
-                    ax=axs[h]
-                )
-        #  plt.show()
-        plt.savefig(os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.png'))
+        # tokens = ['x'] * len(tokens)
+        # print('tokens: ', tokens)
 
-        # visualize_attention(attns, ids)
+        visualize_self_attention(attns, ids)
+        # visualize_transformer(attns, tokens)
 
 
-def visualize_attention(attns, ids):
+def visualize_self_attention(attns, ids):
     attns_add = torch.sum(attns, 1)  # [batch_size, max_len]
     attns_add_np = attns_add.data.cpu().numpy()
     attns_add_list = attns_add_np.tolist()
@@ -431,6 +423,23 @@ def visualize_attention(attns, ids):
                                args.text.replace(' ', '') + '.html')
     )
     print("Attention visualization created for {} samples".format(len(texts)))
+
+def visualize_transformer(attns, tokens):
+    for layer in range(args.t_num_layers):
+        fig, axs = plt.subplots(1, args.num_heads, figsize=(20, 10))
+        # cbar_ax = fig.add_axes([.905, .3, .05, .3])
+        print("self attn Layer: ", layer + 1)
+        for h in range(args.num_heads):
+            seaborn_draw.draw(
+                attns[layer][h].data.cpu().numpy()[:len(tokens), :len(tokens)],
+                tokens,
+                tokens if h == 0 else [],
+                ax=axs[h],
+                # cbar_ax=cbar_ax if h == args.num_heads - 1 else None,
+                # cbar=True if h == args.num_heads - 1 else False
+            )
+    # plt.show()
+    plt.savefig(os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.png'))
 
 
 def cal_performance(pred, gold, smoothing=False):
@@ -483,7 +492,6 @@ if __name__ == '__main__':
     lr = args.lr
     dropout = args.dropout
     text = args.text
-    visualization_dir = args.visualization_dir
 
     if args.checkpoint:
         print('load checkpoint...')
@@ -518,7 +526,6 @@ if __name__ == '__main__':
     args.lr = lr
     args.dropout = dropout
     args.text = text
-    args.visualization_dir = visualization_dir
 
     if args.mode == 'train':
         train_epochs()
