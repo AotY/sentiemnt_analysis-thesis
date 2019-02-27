@@ -94,7 +94,7 @@ class RCNNEncoder(nn.Module):
         # [batch_size, hidden_size]
         outputs = outputs.squeeze(2)
 
-        outputs = F.log_softmax(self.linear_final(outputs), dim=1)
+        outputs = self.linear_final(outputs)
         print('outputs shape: ', outputs.shape)
 
         return outputs, None

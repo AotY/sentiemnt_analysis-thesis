@@ -88,7 +88,7 @@ class RNNEncoder(nn.Module):
         else:
             outputs = outputs[-1]
         # last step output [batch_size, hidden_state]
-        outputs = F.log_softmax(self.linear_final(outputs), dim=1)
+        outputs = self.linear_final(outputs)
 
         return outputs, None
 

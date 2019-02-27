@@ -12,7 +12,7 @@ mkdir -p log/
 mkdir -p models/
 
 python train.py \
-    --data_path data/cleaned.txt \
+    --data_path data/label.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --visualization_dir visualization/ \
@@ -37,9 +37,9 @@ python train.py \
     --stride 1 \
     --padding 0 \
     --dropout 0.3 \
-    --lr 0.0001 \
+    --lr 0.0005 \
     --max_grad_norm 2.0 \
-    --min_len 5 \
+    --min_len 3 \
     --max_len 65 \
     --batch_size 32 \
     --valid_split 0.2 \
@@ -52,11 +52,12 @@ python train.py \
     --seed 23 \
     --save_mode all \
     --save_model models/ \
-    --smoothing \
     --mode train \
     #--checkpoint ./models/accuracy_93.688.pth \
     #--text 医生医术很恶心，而且态度太差了
     #--use_pos \
+    # --smoothing \
+    # --classes_weight 0.066 0.033 1 \
 
 
 /

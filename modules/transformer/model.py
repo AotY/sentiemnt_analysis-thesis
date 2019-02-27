@@ -23,6 +23,7 @@ class Transformer(nn.Module):
 
         self.model_type = config.model_type
         self.n_classes = config.n_classes
+        self.dense_size = config.dense_size
 
         #  self.transformer_size = config.transformer_size
         self.max_len = config.max_len
@@ -38,8 +39,13 @@ class Transformer(nn.Module):
                 self.n_classes,
             )
         elif self.model_type == 'transformer_mean':
-            self.linear_final = nn.Linear(
+            self.linear_dense = nn.Linear(
                 self.embedding_size,
+                self.dense_size,
+            )
+
+            self.linear_final = nn.Linear(
+                self.dense_size,
                 self.n_classes,
             )
 
@@ -63,14 +69,17 @@ class Transformer(nn.Module):
             )
         elif self.model_type == 'transformer_weight':
             # W_s1
-            self.linear_first = torch.nn.Linear(self.embedding_size, config.dense_size)
+            self.linear_first = torch.nn.Linear(
+                self.embedding_size, config.dense_size)
             self.linear_first.bias.data.fill_(0)
 
             # W_s2
-            self.linear_second = torch.nn.Linear(config.dense_size, config.heads)
+            self.linear_second = torch.nn.Linear(
+                config.dense_size, config.heads)
             self.linear_second.bias.data.fill_(0)
 
-            self.linear_final = nn.Linear(config.max_len * config.heads, self.n_classes)
+            self.linear_final = nn.Linear(
+                config.max_len * config.heads, self.n_classes)
 
         nn.init.xavier_normal_(self.linear_final.weight)
 
@@ -93,13 +102,17 @@ class Transformer(nn.Module):
         if self.model_type == 'transformer':
             # [batch_size, max_len * embedding_size]
             outputs = outputs.view(outputs.size(0), -1)
-            outputs = F.log_softmax(self.linear_final(outputs), dim=1)
-        elif self.model_type == 'transformer_mean':
+            outputs = self.linear_final(outputs)
+        elif self.model_type == 'transformer_mean':  # mean, average
+            # [batch_size, embedding_size]
             outputs = outputs.mean(dim=1)
-            outputs = F.log_softmax(self.linear_final(outputs), dim=1)
-        elif self.model_type == 'transformer_rnn':
+            outputs = self.linear_dense(outputs)
+            outputs = F.relu(outputs, dim=1)
+            # [batch_size, n_classes]
+            outputs = self.linear_final(outputs()
+        elif self.model_type == 'transformer_rnn':  # with or without position embedding
             outputs, _ = self.rnn(outputs.transpose(0, 1))
-            outputs = F.log_softmax(self.linear_final(outputs[-1]), dim=1)
+            outputs = self.linear_final(outputs[-1])
         elif self.model_type == 'transformer_weight':
             # [batch_size, max_len, dense_size]
             x = F.tanh(self.linear_first(outputs))
@@ -108,7 +121,7 @@ class Transformer(nn.Module):
             x = self.linear_second(outputs)
 
             # [batch_size, n_classes]
-            outputs = F.log_softmax(self.linear_final(x.view(x.size(0), -1)), dim=1)
+            outputs = self.linear_final(x.view(x.size(0), -1))
 
         # [batch_size, vocab_size]
         return outputs, attns
