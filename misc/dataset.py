@@ -11,6 +11,7 @@ import torch.utils.data as data
 from tqdm import tqdm
 
 from misc.vocab import PAD_ID
+from misc.sampler.imbalanced_dataset_sampler import ImbalancedDatasetSampler
 
 
 def load_data(config, vocab):
@@ -25,7 +26,8 @@ def load_data(config, vocab):
                 disease, doctor, date, label, text = line.split('\t')
 
                 tokens = text.split()
-                tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
+                tokens = [token.split()[0]
+                          for token in tokens if len(token.split()) > 0]
                 if len(tokens) < config.min_len:
                     continue
 
@@ -57,7 +59,8 @@ def build_dataloader(config, datas):
         batch_size=config.batch_size,
         shuffle=True,
         num_workers=4,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        #  sampler=ImbalancedDatasetSampler(train_dataset)
     )
 
     valid_data = data.DataLoader(
@@ -65,7 +68,9 @@ def build_dataloader(config, datas):
         batch_size=config.batch_size,
         shuffle=False,
         num_workers=2,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        #  sampler=ImbalancedDatasetSampler(valid_dataset)
+
     )
 
     test_data = data.DataLoader(
@@ -73,7 +78,8 @@ def build_dataloader(config, datas):
         batch_size=config.batch_size,
         shuffle=False,
         num_workers=2,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        #  sampler=ImbalancedDatasetSampler(test_dataset)
     )
 
     return train_data, valid_data, test_data
@@ -113,7 +119,8 @@ class MyCollate:
             ids = ids + [PAD_ID] * (max_len - len(ids))
             inputs.append(ids)
 
-            pos = [pos_i + 1 if w_i != PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
+            pos = [pos_i + 1 if w_i !=
+                   PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
             inputs_pos.append(pos)
 
             labels.append(label)

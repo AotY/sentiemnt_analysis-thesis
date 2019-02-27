@@ -130,7 +130,7 @@ class StructuredSelfAttention(nn.Module):
         avg_sentence_embeddings = torch.sum(sentence_embeddings, dim=1) / self.num_heads
 
         # [batch_size, n_classes]
-        outputs = F.log_softmax(self.linear_final(avg_sentence_embeddings), dim=1)
+        outputs = self.linear_final(avg_sentence_embeddings)
 
         return outputs, attns
 

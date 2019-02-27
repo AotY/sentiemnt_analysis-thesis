@@ -22,7 +22,8 @@ from utils import save_distribution
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_dir', type=str, default='')
-parser.add_argument('--cleaned_path', type=str, default='')
+parser.add_argument('--label_cleaned_path', type=str, default='')
+parser.add_argument('--score_cleaned_path', type=str, default='')
 parser.add_argument('--vocab_freq_path', type=str, default='')
 parser.add_argument('--save_dir', type=str, default='./data')
 
@@ -39,7 +40,14 @@ def cleaning_stats():
 
     label_dict = Counter()
 
-    cleaned_file = open(args.cleaned_path, 'w', encoding='utf-8')
+    score_dict = Counter()
+
+    score_files = [None] * 5
+    for i in range(5):
+        score_files[i] = open(os.path.join(args.save_dir, 'score.%d.txt' % (i+1)), 'w', encoding='utf-8')
+
+    label_cleaned_file = open(args.label_cleaned_path, 'w', encoding='utf-8')
+    score_cleaned_file = open(args.score_cleaned_path, 'w', encoding='utf-8')
     cleaned_datas = list()
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
@@ -81,8 +89,9 @@ def cleaning_stats():
                         label = 2
                     else:
                         raise ValueError('score: %s is not valid.' % score)
-
                     label_dict.update(str(label))
+
+                    score_dict.update(str(score))
 
                     tokens = tokenizer.tokenize(text)
                     freq_dict.update(tokens)
@@ -93,7 +102,11 @@ def cleaning_stats():
 
                     text = ' '.join(tokens)
 
-                    cleaned_datas.append((disease, doctor, date, label, text))
+                    # split by score
+                    score_files[int(score) - 1].write('%s\t%s\t%s\t%s\t%s\n' % (
+                        disease, doctor, date, score, text.replace(' ', '')))
+
+                    cleaned_datas.append((disease, doctor, date, score, label, text))
                 del line_set
 
     # shuffle
@@ -101,28 +114,39 @@ def cleaning_stats():
 
     # re write
     for item in cleaned_datas:
-        disease, doctor, date, label, text = item
-        cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
+        disease, doctor, date, score, label, text = item
+        label_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
             disease, doctor, date, label, text))
 
-    cleaned_file.close()
+        score_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
+            disease, doctor, date, score, text))
 
-    return freq_dict, len_dict, label_dict
+    label_cleaned_file.close()
+    score_cleaned_file.close()
+
+    for score_file in score_files:
+        score_file.close()
+
+    return freq_dict, len_dict, label_dict, score_dict
 
 
 def main():
-    freq_dict, len_dict, label_dict = cleaning_stats()
+    freq_dict, len_dict, label_dict, score_dict = cleaning_stats()
     freq_list = sorted(freq_dict.items(),
                        key=lambda item: item[1], reverse=True)
     save_distribution(freq_list, args.vocab_freq_path)
 
     len_list = sorted(len_dict.items(),
                       key=lambda item: item[0], reverse=False)
-    save_distribution(len_list, os.path.join(args.save_dir, 'len.dist'))
+    save_distribution(len_list, os.path.join(args.save_dir, 'len.dist'), percentage=True)
 
     label_list = sorted(label_dict.items(),
-                      key=lambda item: item[1], reverse=False)
-    save_distribution(label_list, os.path.join(args.save_dir, 'label.dist'))
+                      key=lambda item: item[0], reverse=False)
+    save_distribution(label_list, os.path.join(args.save_dir, 'label.dist'), percentage=True)
+
+    score_list = sorted(score_dict.items(),
+                      key=lambda item: item[0], reverse=False)
+    save_distribution(score_list, os.path.join(args.save_dir, 'score.dist'), percentage=True)
 
 
 if __name__ == '__main__':

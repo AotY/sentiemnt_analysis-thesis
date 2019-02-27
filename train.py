@@ -85,6 +85,7 @@ parser.add_argument('--seed', type=str, help='random seed')
 parser.add_argument('--model_type', type=str, help='')
 parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
+parser.add_argument('--classes_weight', nargs='+', type=int, help='')
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -388,6 +389,7 @@ def test():
             inputs=inputs,
             inputs_pos=inputs_pos
         )
+        outputs = F.log_softmax(outputs, dim=1)
         print('outputs: ', outputs)
 
         label = outputs.squeeze(0).topk(1)[1].item()
@@ -476,13 +478,17 @@ def cal_loss(pred, gold, smoothing):
 
         one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
         one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_classes - 1)
+
         log_prb = F.log_softmax(pred, dim=1)
 
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.sum()  # average later
     else:
-        loss = F.cross_entropy(pred, gold, reduction='sum')
-
+        if args.classes_weight is not None and len(args.classes_weight) != 0:
+            weight = torch.tensor(args.classes_weight, device=device)
+            loss = F.cross_entropy(pred, gold, weight=weight, reduction='sum')
+        else:
+            loss = F.cross_entropy(pred, gold, reduction='sum')
     return loss
 
 
