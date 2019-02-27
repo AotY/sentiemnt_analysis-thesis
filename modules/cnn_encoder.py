@@ -30,6 +30,9 @@ class CNNEncoder(nn.Module):
             --------
         """
         super(CNNEncoder, self).__init__()
+
+        self.problem = config.problem
+
         # embedding
         self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
@@ -64,8 +67,14 @@ class CNNEncoder(nn.Module):
 
         self.dropout = nn.Dropout(config.dropout)
 
-        self.linear_final = nn.Linear(
-            len(self.kernel_heights) * self.out_channels, config.n_classes)
+        if self.problem == 'classification':
+            self.linear_final = nn.Linear(
+                len(self.kernel_heights) * self.out_channels, config.n_classes)
+        else:
+            self.linear_dense = nn.Linear(
+                len(self.kernel_heights) * self.out_channels, config.dense_size)
+            self.linear_regression = nn.Linear(config.dense_size, 1)
+
 
     def conv_block(self, inputs, conv_layer):
         # print('inputs shape: ', inputs.shape)
@@ -125,8 +134,11 @@ class CNNEncoder(nn.Module):
 
         outputs = self.dropout(outputs)
 
-        # [batch_size, num_kernels * out_channels]
-        outputs = self.linear_final(outputs)
-        # print('outputs shape: ', outputs.shape)
+        if self.problem == 'classification':
+            # [batch_size, num_kernels * out_channels]
+            outputs = self.linear_final(outputs)
+        else:
+            outputs = self.linear_dense(outputs)
+            outputs = self.linear_regression(outputs)
 
         return outputs, None

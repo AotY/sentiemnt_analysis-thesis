@@ -60,7 +60,7 @@ def build_dataloader(config, datas):
         # shuffle=True,
         num_workers=4,
         collate_fn=collate_fn,
-        sampler=ImbalancedDatasetSampler(train_dataset)
+        #  sampler=ImbalancedDatasetSampler(train_dataset)
     )
 
     valid_data = data.DataLoader(

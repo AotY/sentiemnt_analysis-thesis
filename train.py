@@ -83,6 +83,7 @@ parser.add_argument('--log', type=str, help='save log.')
 parser.add_argument('--log_mode', type=str, default='w', help='w or a')
 parser.add_argument('--seed', type=str, help='random seed')
 parser.add_argument('--model_type', type=str, help='')
+parser.add_argument('--problem', type=str, help='classification or regression')
 parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
 parser.add_argument('--classes_weight', nargs='+', type=float, help='')
@@ -106,7 +107,7 @@ datas = load_data(args, vocab)
 # dataset, data_load
 train_data, valid_data, test_data = build_dataloader(args, datas)
 
-# load pretrained embedding
+# load pretrained embedding TODO
 pretrained_embedding = None
 
 # model
@@ -166,8 +167,12 @@ def train_epochs():
         if args.log_mode == 'w':
             with open(log_train_file, 'w') as log_tf, \
                     open(log_valid_file, 'w') as log_vf:
-                log_tf.write('epoch, loss, accuracy, recall, f1\n')
-                log_vf.write('epoch, loss, accuracy, recall, f1\n')
+                if args.problem == 'classification':
+                    log_tf.write('epoch, loss, accuracy, recall, f1\n')
+                    log_vf.write('epoch, loss, accuracy, recall, f1\n')
+                else:
+                    log_tf.write('epoch, loss, \n')
+                    log_vf.write('epoch, loss, \n')
 
     valid_accuracies = []
     for epoch in range(args.start_epoch, args.epochs + 1):
@@ -175,31 +180,35 @@ def train_epochs():
 
         start = time.time()
 
-        train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
-
-        print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-              'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
-              'elapse: {elapse:3.3f}min'.format(
-                  loss=train_loss,
-                  accuracy=100*train_accuracy,
-                  recall=100*train_recall,
-                  f1=100*train_f1,
-                  elapse=(time.time()-start)/60)
-              )
+        if args.problem == 'classification':
+            train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
+            print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+                  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
+                  'elapse: {elapse:3.3f}min'.format(
+                      loss=train_loss,
+                      accuracy=100*train_accuracy,
+                      recall=100*train_recall,
+                      f1=100*train_f1,
+                      elapse=(time.time()-start)/60)
+                  )
+        else:
+            train_loss = train(epoch)
 
         start = time.time()
-        valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
-        print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-              'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
-              'elapse: {elapse:3.3f} min'.format(
-                  loss=valid_loss,
-                  accuracy=100*valid_accuracy,
-                  recall=100*valid_recall,
-                  f1=100*valid_f1,
-                  elapse=(time.time()-start)/60)
-              )
-
-        valid_accuracies += [valid_accuracy]
+        if args.problem == 'classification':
+            valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
+            print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+                  'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
+                  'elapse: {elapse:3.3f} min'.format(
+                      loss=valid_loss,
+                      accuracy=100*valid_accuracy,
+                      recall=100*valid_recall,
+                      f1=100*valid_f1,
+                      elapse=(time.time()-start)/60)
+                  )
+            valid_accuracies += [valid_accuracy]
+        else:
+            valid_loss = eval(epoch)
 
         # is early_stopping
         is_stop = early_stopping.step(valid_loss)
@@ -210,41 +219,63 @@ def train_epochs():
             'epoch': epoch,
             'optimizer': optimizer.optimizer.state_dict(),
             'valid_loss': valid_loss,
-            'valid_accuracy': valid_accuracy,
-            'valid_recall': valid_recall,
-            'valid_f1': valid_f1
         }
+        if args.problem == 'classification':
+            checkpoint['valid_accuracy'] = valid_accuracy
+            checkpoint['valid_recall'] = valid_recall
+            checkpoint['valid_f1'] = valid_f1
 
         if args.save_model:
             if args.save_mode == 'all':
-                model_name = os.path.join(
-                    args.save_model,
-                    'accuracy_{accuracy:3.3f}.pth'.format(
-                        accuracy=100*valid_accuracy)
-                )
+                if args.problem == 'classification':
+                    model_name = os.path.join(
+                        args.save_model,
+                        'classification.accuracy_{accuracy:3.3f}.pth'.format(
+                            accuracy=100*valid_accuracy))
+                else:
+                    model_name = os.path.join(
+                        args.save_model,
+                        'regression.loss_{loss:8.5f}.pth'.format(
+                            loss=valid_loss))
+
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
-                model_name = os.path.join(args.save_model, 'best.pth')
+                if args.problem == 'classification':
+                    model_name = os.path.join(
+                        args.save_model, 'classification.best.pth')
+                else:
+                    model_name = os.path.join(
+                        args.save_model, 'regression.best.pth')
                 if valid_accuracy >= max(valid_accuracies):
                     torch.save(checkpoint, model_name)
                     print('   - [Info] The checkpoint file has been updated.')
 
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
-                log_tf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall:3.3f}, {f1:3.3f}\n'.format(
-                    epoch=epoch,
-                    loss=train_loss,
-                    accuracy=100*train_accuracy,
-                    recall=100*train_recall,
-                    f1=100*train_f1)
-                )
-                log_vf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall: 3.3f}, {f1:3.3f}\n'.format(
-                    epoch=epoch,
-                    loss=valid_loss,
-                    accuracy=100*valid_accuracy,
-                    recall=100*valid_recall,
-                    f1=100*valid_f1)
-                )
+                if args.problem == 'classification':
+                    log_tf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall:3.3f}, {f1:3.3f}\n'.format(
+                        epoch=epoch,
+                        loss=train_loss,
+                        accuracy=100*train_accuracy,
+                        recall=100*train_recall,
+                        f1=100*train_f1)
+                    )
+                    log_vf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall: 3.3f}, {f1:3.3f}\n'.format(
+                        epoch=epoch,
+                        loss=valid_loss,
+                        accuracy=100*valid_accuracy,
+                        recall=100*valid_recall,
+                        f1=100*valid_f1)
+                    )
+                else:
+                    log_tf.write('{epoch}, {loss: 8.5f}, \n'.format(
+                        epoch=epoch,
+                        loss=train_loss,
+                    ))
+                    log_vf.write('{epoch}, {loss: 8.5f}, \n'.format(
+                        epoch=epoch,
+                        loss=valid_loss,
+                    ))
 
         if is_stop:
             print('Early Stopping.\n')
@@ -258,10 +289,11 @@ def train(epoch):
     model.train()
 
     total_loss = 0
-    total_accuracy = 0
-    total_recall = 0
-    total_f1 = 0
     times = 0
+    if args.problem == 'classification':
+        total_accuracy = 0
+        total_recall = 0
+        total_f1 = 0
 
     for batch in tqdm(
             train_data, mininterval=2,
@@ -285,11 +317,10 @@ def train(epoch):
         )
 
         # backward
-        loss, accuracy, recall, f1 = cal_performance(
-            outputs,
-            labels,
-            smoothing=args.smoothing
-        )
+        if args.problem == 'classification':
+            loss, accuracy, recall, f1 = cal_performance(outputs, labels)
+        else:
+            loss = cal_performance(outputs, labels)
 
         loss.backward()
 
@@ -298,17 +329,20 @@ def train(epoch):
 
         # note keeping
         total_loss += loss.item()
-        total_accuracy += accuracy
-        total_recall += recall
-        total_f1 += f1
         times += 1
+        if args.problem == 'classification':
+            total_accuracy += accuracy
+            total_recall += recall
+            total_f1 += f1
 
     avg_loss = total_loss / times
-    avg_accuracy = total_accuracy / times
-    avg_recall = total_recall / times
-    avg_f1 = total_f1 / times
-
-    return avg_loss, avg_accuracy, avg_recall, avg_f1
+    if args.problem == 'classification':
+        avg_accuracy = total_accuracy / times
+        avg_recall = total_recall / times
+        avg_f1 = total_f1 / times
+        return avg_loss, avg_accuracy, avg_recall, avg_f1
+    else:
+        return avg_loss
 
 
 def eval(epoch):
@@ -316,10 +350,11 @@ def eval(epoch):
     model.eval()
 
     total_loss = 0
-    total_accuracy = 0
-    total_recall = 0
-    total_f1 = 0
     times = 0
+    if args.problem == 'classification':
+        total_accuracy = 0
+        total_recall = 0
+        total_f1 = 0
 
     with torch.no_grad():
         for batch in tqdm(
@@ -342,22 +377,24 @@ def eval(epoch):
             loss, accuracy, recall, f1 = cal_performance(
                 outputs,
                 labels,
-                smoothing=args.smoothing
             )
 
             # note keeping
             total_loss += loss.item()
-            total_accuracy += accuracy
-            total_recall += recall
-            total_f1 += f1
             times += 1
+            if args.problem == 'classification':
+                total_accuracy += accuracy
+                total_recall += recall
+                total_f1 += f1
 
     avg_loss = total_loss / times
-    avg_accuracy = total_accuracy / times
-    avg_recall = total_recall / times
-    avg_f1 = total_f1 / times
-
-    return avg_loss, avg_accuracy, avg_recall, avg_f1
+    if args.problem == 'classification':
+        avg_accuracy = total_accuracy / times
+        avg_recall = total_recall / times
+        avg_f1 = total_f1 / times
+        return avg_loss, avg_accuracy, avg_recall, avg_f1
+    else:
+        return avg_loss
 
 
 def test():
@@ -389,24 +426,30 @@ def test():
             inputs=inputs,
             inputs_pos=inputs_pos
         )
-        outputs = F.log_softmax(outputs, dim=1)
-        print('outputs: ', outputs)
 
-        label = outputs.squeeze(0).topk(1)[1].item()
-        # print('attns: ', attns.shape)
+        if args.problem == 'classification':
+            outputs = F.log_softmax(outputs, dim=1)
+            print('outputs: ', outputs)
 
-        # print('len(attns): ', len(attns))
-        # print('attns[0]: ', attns[0].shape)
-        # print('attns[-1]: ', attns[-1].shape)
+            label = outputs.squeeze(0).topk(1)[1].item()
+            # print('attns: ', attns.shape)
 
-        print('text: %s, label: %d' % (args.text, label))
-        # print('attns: ', attns)
+            # print('len(attns): ', len(attns))
+            # print('attns[0]: ', attns[0].shape)
+            # print('attns[-1]: ', attns[-1].shape)
 
-        # tokens = ['x'] * len(tokens)
-        # print('tokens: ', tokens)
+            print('text: %s, label: %d' % (args.text, label))
+            # print('attns: ', attns)
 
-        # visualize_self_attention(attns, ids)
-        # visualize_transformer(attns, tokens)
+            # tokens = ['x'] * len(tokens)
+            # print('tokens: ', tokens)
+
+            # visualize_self_attention(attns, ids)
+            # visualize_transformer(attns, tokens)
+        else:
+            # outputs: [1, 1]
+            print('outputs: ', outputs)
+            print('text: %s, label: %d' % (args.text, outputs.item()))
 
 
 def visualize_self_attention(attns, ids):
@@ -426,6 +469,7 @@ def visualize_self_attention(attns, ids):
     )
     print("Attention visualization created for {} samples".format(len(texts)))
 
+
 def visualize_transformer(attns, tokens):
     for layer in range(args.t_num_layers):
         fig, axs = plt.subplots(1, args.num_heads, figsize=(20, 10))
@@ -441,54 +485,65 @@ def visualize_transformer(attns, tokens):
                 # cbar=True if h == args.num_heads - 1 else False
             )
     # plt.show()
-    plt.savefig(os.path.join(args.visualization_dir, args.text.replace(' ', '') + '.png'))
+    plt.savefig(os.path.join(args.visualization_dir,
+                             args.text.replace(' ', '') + '.png'))
 
 
-def cal_performance(pred, gold, smoothing=False):
+def cal_performance(pred, gold):
     ''' Apply label smoothing if needed '''
     # pred: [batch_size, n_classes]
     # gold: [batch_size]
     # print('pred shape: ', pred.shape)
     # print('gold shape: ', gold.shape)
 
-    loss = cal_loss(pred, gold, smoothing)
+    loss = cal_loss(pred, gold, args.smoothing)
 
-    # [batch_size]
-    pred = pred.max(dim=1)[1]
+    if args.problem == 'classification':
+        # [batch_size]
+        pred = pred.max(dim=1)[1]
 
-    # [batch_size]
-    gold = gold.contiguous().view(-1)
+        # [batch_size]
+        gold = gold.contiguous().view(-1)
 
-    accuracy = accuracy_score(gold.tolist(), pred.tolist())
-    recall = recall_score(gold.tolist(), pred.tolist(), average='micro')
-    f1 = f1_score(gold.tolist(), pred.tolist(), average='micro')
+        accuracy = accuracy_score(gold.tolist(), pred.tolist())
+        recall = recall_score(gold.tolist(), pred.tolist(), average='micro')
+        f1 = f1_score(gold.tolist(), pred.tolist(), average='micro')
 
-    return loss, accuracy, recall, f1
+        return loss, accuracy, recall, f1
+    else:
+        return loss
 
 
 def cal_loss(pred, gold, smoothing):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
 
-    # [max_len * batch_size]
-    gold = gold.contiguous().view(-1)
+    if args.problem == 'classification':
+        # [max_len * batch_size]
+        gold = gold.contiguous().view(-1)
 
-    if smoothing:
-        eps = 0.1
-        n_classes = pred.size(1)
+        if smoothing:
+            eps = 0.1
+            n_classes = pred.size(1)
 
-        one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
-        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_classes - 1)
+            one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
+            one_hot = one_hot * (1 - eps) + (1 - one_hot) * \
+                eps / (n_classes - 1)
 
-        log_prb = F.log_softmax(pred, dim=1)
+            log_prb = F.log_softmax(pred, dim=1)
 
-        loss = -(one_hot * log_prb).sum(dim=1)
-        loss = loss.sum()  # average later
-    else:
-        if args.classes_weight is not None and len(args.classes_weight) != 0:
-            weight = torch.tensor(args.classes_weight, device=device)
-            loss = F.cross_entropy(pred, gold, weight=weight, reduction='sum')
+            loss = -(one_hot * log_prb).sum(dim=1)
+            loss = loss.sum()  # average later
         else:
-            loss = F.cross_entropy(pred, gold, reduction='sum')
+            if args.classes_weight is not None and len(args.classes_weight) != 0:
+                weight = torch.tensor(args.classes_weight, device=device)
+                loss = F.cross_entropy(
+                    pred, gold, weight=weight, reduction='sum')
+            else:
+                loss = F.cross_entropy(pred, gold, reduction='sum')
+    else:
+        # pred: [batch_size, 1], gold: [batch_size, 1]
+        loss = F.smooth_l1_loss(input=pred, target=gold)
+
     return loss
 
 

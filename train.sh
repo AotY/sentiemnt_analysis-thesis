@@ -17,6 +17,7 @@ python train.py \
     --data_dir data/ \
     --visualization_dir visualization/ \
     --log log/ \
+    --problem regression \
     --model_type cnn \
     --n_classes 3 \
     --rnn_type LSTM \
@@ -53,7 +54,7 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
-    --classes_weight 0.557 1.0 0.038 \
+    # --classes_weight 0.557 1.0 0.038 \
     #--checkpoint ./models/accuracy_92.813.pth \
     #--text 没看多久，看得简单，感觉很一般。
     #--classes_weight  0.0082 0.00151 0.000053 \
