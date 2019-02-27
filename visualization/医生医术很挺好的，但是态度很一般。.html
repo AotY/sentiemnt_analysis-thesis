@@ -1,0 +1,67 @@
+
+    <html lang="en">
+    <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <style>
+    body {
+    font-family: Sans-Serif;
+    }
+    </style>
+    </head>
+    <body>
+    <h3>
+    Heatmaps
+    </h3>
+    </body>
+    <script>
+    var any_text = ["医生 医术 很 挺 好 的 ， 但是 态度 很 一般 。 <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD>"];
+var trigram_weights = [[0.10425596684217453, 0.11072412133216858, 0.1090853363275528, 0.10857196152210236, 0.11062657833099365, 0.10967849940061569, 0.1077970638871193, 0.11072248220443726, 0.10691650956869125, 0.11074066162109375, 0.11026781052350998, 0.10854550451040268, 0.1084713488817215, 0.10680466890335083, 0.10599935054779053, 0.10240087658166885, 0.1018054336309433, 0.09739614278078079, 0.09759467095136642, 0.0913332998752594, 0.09808140993118286, 0.09340174496173859, 0.08963200449943542, 0.09632314741611481, 0.09608302265405655, 0.09582989662885666, 0.09626799821853638, 0.10120619833469391, 0.09715202450752258, 0.09420336037874222, 0.09811751544475555, 0.09708176553249359, 0.09239797294139862, 0.09716615080833435, 0.09588010609149933, 0.09679022431373596, 0.09434650838375092, 0.09430859982967377, 0.094179168343544, 0.09378742426633835, 0.0941961333155632, 0.09194495528936386, 0.09138669073581696, 0.09045790135860443, 0.09005427360534668, 0.08344252407550812, 0.08578703552484512, 0.08786483108997345, 0.08631059527397156, 0.08168695867061615, 0.07895131409168243, 0.08132294565439224, 0.07754656672477722, 0.08205921947956085, 0.08348079025745392, 0.08140799403190613, 0.0757891908288002, 0.07207765430212021, 0.06912095844745636, 0.06723254919052124, 0.07059652358293533, 0.07385323941707611, 0.07821384072303772, 0.06697557866573334, 0.02626531757414341]];
+
+    var color = "255,0,0";
+    var ngram_length = 3;
+    var half_ngram = 1;
+    for (var k=0; k < any_text.length; k++) {
+    var tokens = any_text[k].split(" ");
+    var intensity = new Array(tokens.length);
+    var max_intensity = Number.MIN_SAFE_INTEGER;
+    var min_intensity = Number.MAX_SAFE_INTEGER;
+    for (var i = 0; i < intensity.length; i++) {
+    intensity[i] = 0.0;
+    for (var j = -half_ngram; j < ngram_length-half_ngram; j++) {
+    if (i+j < intensity.length && i+j > -1) {
+    intensity[i] += trigram_weights[k][i + j];
+    }
+    }
+    if (i == 0 || i == intensity.length-1) {
+    intensity[i] /= 2.0;
+    } else {
+    intensity[i] /= 3.0;
+    }
+    if (intensity[i] > max_intensity) {
+    max_intensity = intensity[i];
+    }
+    if (intensity[i] < min_intensity) {
+    min_intensity = intensity[i];
+    }
+    }
+    var denominator = max_intensity - min_intensity;
+    for (var i = 0; i < intensity.length; i++) {
+    intensity[i] = (intensity[i] - min_intensity) / denominator;
+    }
+    if (k%2 == 0) {
+    var heat_text = "<p><br><b>Example:</b><br>";
+    } else {
+    var heat_text = "<b>Example:</b><br>";
+    }
+    var space = "";
+    for (var i = 0; i < tokens.length; i++) {
+    heat_text += "<span style='background-color:rgba(" + color + "," + intensity[i] + ")'>" + space + tokens[i] + "</span>";
+    if (space == "") {
+    space = " ";
+    }
+    }
+    //heat_text += "<p>";
+    document.body.innerHTML += heat_text;
+    }
+    </script>
+    </html>

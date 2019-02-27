@@ -85,7 +85,7 @@ parser.add_argument('--seed', type=str, help='random seed')
 parser.add_argument('--model_type', type=str, help='')
 parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
-parser.add_argument('--classes_weight', nargs='+', type=int, help='')
+parser.add_argument('--classes_weight', nargs='+', type=float, help='')
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -405,7 +405,7 @@ def test():
         # tokens = ['x'] * len(tokens)
         # print('tokens: ', tokens)
 
-        visualize_self_attention(attns, ids)
+        # visualize_self_attention(attns, ids)
         # visualize_transformer(attns, tokens)
 
 

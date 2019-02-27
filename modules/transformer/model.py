@@ -109,7 +109,7 @@ class Transformer(nn.Module):
             outputs = self.linear_dense(outputs)
             outputs = F.relu(outputs, dim=1)
             # [batch_size, n_classes]
-            outputs = self.linear_final(outputs()
+            outputs = self.linear_final(outputs)
         elif self.model_type == 'transformer_rnn':  # with or without position embedding
             outputs, _ = self.rnn(outputs.transpose(0, 1))
             outputs = self.linear_final(outputs[-1])

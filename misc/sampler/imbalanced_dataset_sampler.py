@@ -57,6 +57,12 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
             #  raise NotImplementedError
 
     def __iter__(self):
+        """
+        If replacement is ``True``, samples are drawn with replacement.
+
+        If not, they are drawn without replacement, which means that when a
+        sample index is drawn for a row, it cannot be drawn again for that row.
+        """
         return (self.indices[i] for i in
                 torch.multinomial(self.weights, self.num_samples, replacement=True))
 

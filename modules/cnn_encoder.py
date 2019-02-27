@@ -68,19 +68,19 @@ class CNNEncoder(nn.Module):
             len(self.kernel_heights) * self.out_channels, config.n_classes)
 
     def conv_block(self, inputs, conv_layer):
-        print('inputs shape: ', inputs.shape)
+        # print('inputs shape: ', inputs.shape)
         # [batch_size, out_channels, dim, 1]
         conv_out = conv_layer(inputs)
-        print('conv_out shape: ', conv_out.shape)
+        # print('conv_out shape: ', conv_out.shape)
 
         # [batch_size, out_channels, dim]
         activation = F.relu(conv_out.squeeze(3))
-        print('activation shape: ', activation.shape)
+        # print('activation shape: ', activation.shape)
 
         # [batch_size, out_channels], kernel_sizes: the size of the window to
         # take a max over
         max_out = F.max_pool1d(activation, activation.size(2)).squeeze(2)
-        print('max_out shape: ', max_out.shape)
+        # print('max_out shape: ', max_out.shape)
 
         return max_out
 
@@ -121,12 +121,12 @@ class CNNEncoder(nn.Module):
 
         # [batch_size, num_kernels * out_channels]
         outputs = torch.cat((max_out1, max_out2, max_out3), dim=1)
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
         outputs = self.dropout(outputs)
 
         # [batch_size, num_kernels * out_channels]
         outputs = self.linear_final(outputs)
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
-        return outputs
+        return outputs, None

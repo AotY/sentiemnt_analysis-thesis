@@ -133,11 +133,7 @@ class StructuredSelfAttention(nn.Module):
         outputs = self.linear_final(avg_sentence_embeddings)
 
         return outputs, attns
-
-        #  if not bool(self.type):
-            #  output = F.sigmoid(self.linear_final(avg_sentence_embeddings))
-            #  return output,attention
-        #  else:
+        #  output = F.sigmoid(self.linear_final(avg_sentence_embeddings))
 
     def l2_matrix_norm(self, M):
         """

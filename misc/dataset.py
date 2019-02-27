@@ -57,10 +57,10 @@ def build_dataloader(config, datas):
     train_data = data.DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=True,
+        # shuffle=True,
         num_workers=4,
         collate_fn=collate_fn,
-        #  sampler=ImbalancedDatasetSampler(train_dataset)
+        sampler=ImbalancedDatasetSampler(train_dataset)
     )
 
     valid_data = data.DataLoader(
