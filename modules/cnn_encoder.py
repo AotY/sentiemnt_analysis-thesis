@@ -71,9 +71,10 @@ class CNNEncoder(nn.Module):
             self.linear_final = nn.Linear(
                 len(self.kernel_heights) * self.out_channels, config.n_classes)
         else:
-            self.linear_dense = nn.Linear(
-                len(self.kernel_heights) * self.out_channels, config.dense_size)
-            self.linear_regression = nn.Linear(config.dense_size, 1)
+            # self.linear_regression_dense = nn.Linear(
+                # len(self.kernel_heights) * self.out_channels, config.regression_dense_size)
+            # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
+            self.linear_regression_final = nn.Linear(len(self.kernel_heights) * self.out_channels, 1)
 
 
     def conv_block(self, inputs, conv_layer):
@@ -138,7 +139,7 @@ class CNNEncoder(nn.Module):
             # [batch_size, num_kernels * out_channels]
             outputs = self.linear_final(outputs)
         else:
-            outputs = self.linear_dense(outputs)
-            outputs = self.linear_regression(outputs)
+            # outputs = self.linear_regression_dense(outputs)
+            outputs = self.linear_regression_final(outputs)
 
         return outputs, None

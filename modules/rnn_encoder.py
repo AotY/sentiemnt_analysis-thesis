@@ -21,6 +21,8 @@ class RNNEncoder(nn.Module):
                  embedding):
         super(RNNEncoder, self).__init__()
 
+        self.problem = config.problem
+
         self.model_type = config.model_type
         self.rnn_type = config.rnn_type
 
@@ -31,6 +33,7 @@ class RNNEncoder(nn.Module):
         self.bidirection_num = 2 if config.bidirectional else 1
         self.hidden_size = config.hidden_size // self.bidirection_num
         self.n_classes = config.n_classes
+        self.num_layers = config.num_layers
 
         # dropout
         self.dropout = nn.Dropout(config.dropout)
@@ -40,15 +43,21 @@ class RNNEncoder(nn.Module):
             rnn_type=config.rnn_type,
             input_size=self.embedding_size,
             hidden_size=self.hidden_size,
-            num_layers=config.num_layers,
+            num_layers=self.num_layers,
             bidirectional=config.bidirectional,
             dropout=config.dropout
         )
 
         rnn_init(config.rnn_type, self.rnn)
 
-        self.linear_final = nn.Linear(
-            self.hidden_size * self.bidirection_num, self.n_classes)
+        if self.problem == 'classification':
+            self.linear_final = nn.Linear(
+                self.hidden_size * self.bidirection_num, self.n_classes)
+        else:
+            # self.linear_regression_dense = nn.Linear(
+                # self.hidden_size * self.bidirection_num, config.regression_dense_size)
+            # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
+            self.linear_regression_final = nn.Linear(self.hidden_size * self.bidirection_num, 1)
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         '''
@@ -63,7 +72,7 @@ class RNNEncoder(nn.Module):
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
-        print('embedded shape: ', embedded.shape)
+        # print('embedded shape: ', embedded.shape)
         if lengths is not None:
             embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
@@ -75,7 +84,7 @@ class RNNEncoder(nn.Module):
         if lengths is not None:
             outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
 
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
         if self.model_type == 'rnn_attention':
             # [batch_size, max_len, hidden_size]
@@ -83,16 +92,24 @@ class RNNEncoder(nn.Module):
             final_state = hidden_state
             if self.rnn_type == 'LSTM':
                 final_state = hidden_state[0]
+                final_state = final_state.view(self.num_layers, final_state.size(1), -1)
+                final_state = torch.sum(final_state, dim=0)
 
-            outputs = self.attention_net(outputs, final_state)
+            outputs, attns = self.attention_net(outputs, final_state)
         else:
             outputs = outputs[-1]
-        # last step output [batch_size, hidden_state]
-        outputs = self.linear_final(outputs)
+            attns = None
 
-        return outputs, None
+        if self.problem == 'classification':
+            # last step output [batch_size, hidden_state]
+            outputs = self.linear_final(outputs)
+        else:
+            # outputs = self.linear_regression_dense(outputs)
+            outputs = self.linear_regression_final(outputs)
 
-    def attention_net(self, lstm_output, final_state):
+        return outputs, attns
+
+    def attention_net(self, lstm_outputs, final_state):
         """
         Now we will incorporate Attention mechanism in our LSTM model. In this new model, we will use attention to compute soft alignment score corresponding
         between each of the hidden_state and the last hidden_state of the LSTM. We will be using torch.bmm for the batch matrix multiplication.
@@ -100,25 +117,32 @@ class RNNEncoder(nn.Module):
         Arguments
         ---------
 
-        lstm_output : Final output of the LSTM which contains hidden layer outputs for each sequence.
+        lstm_outputs : Final output of the LSTM which contains hidden layer outputs for each sequence.
         final_state : Final time-step hidden state (h_n) of the LSTM
 
         ---------
 
-        Returns : It performs attention mechanism by first computing weights for each of the sequence present in lstm_output and and then finally computing the
+        Returns : It performs attention mechanism by first computing weights for each of the sequence present in lstm_outputs and and then finally computing the
                           new hidden state.
 
         Tensor Size :
-                                hidden.size() = (batch_size, hidden_size)
-                                attn_weights.size() = (batch_size, num_seq)
-                                soft_attn_weights.size() = (batch_size, num_seq)
-                                new_hidden_state.size() = (batch_size, hidden_size)
-
+            hidden.size() = (batch_size, hidden_size)
+            attn_weights.size() = (batch_size, num_seq)
+            soft_attn_weights.size() = (batch_size, num_seq)
+            new_hidden_state.size() = (batch_size, hidden_size)
         """
+        # print('fianl_state: ', final_state.shape)
+        # [batch_size, hidden_size, 1]
+        hidden = final_state.unsqueeze(2)
+        # print('hidden: ', hidden.shape)
 
-        hidden = final_state.squeeze(0)
-        attn_weights = torch.bmm(lstm_output, hidden.unsqueeze(2)).squeeze(2)
+        # [batch_size, max_len, 1]
+        attn_weights = torch.bmm(lstm_outputs, hidden)
+
+        # [batch_size, max_len, 1]
         soft_attn_weights = F.softmax(attn_weights, 1)
-        new_hidden_state = torch.bmm(lstm_output.transpose(1, 2), soft_attn_weights.unsqueeze(2)).squeeze(2)
 
-        return new_hidden_state
+        # [batch_size, hidden_size]
+        new_hidden_state = torch.bmm(lstm_outputs.transpose(1, 2), soft_attn_weights).squeeze(2)
+
+        return new_hidden_state, soft_attn_weights

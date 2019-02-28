@@ -51,7 +51,11 @@ class RCNNEncoder(nn.Module):
 
         self.W2 = nn.Linear(self.hidden_size * self.bidirection_num + self.embedding_size, self.hidden_size)
 
-        self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
+        if self.problem == 'classification':
+            self.linear_final = nn.Linear(self.hidden_size, self.n_classes)
+        else:
+            self.linear_regression_dense = nn.Linear(self.hidden_size, config.regression_dense_size)
+            self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         '''
@@ -94,7 +98,11 @@ class RCNNEncoder(nn.Module):
         # [batch_size, hidden_size]
         outputs = outputs.squeeze(2)
 
-        outputs = self.linear_final(outputs)
+        if self.problem == 'classification':
+            outputs = self.linear_final(outputs)
+        else:
+            outputs = self.linear_regression_dense(outputs)
+            outputs = self.linear_regression_final(outputs)
         print('outputs shape: ', outputs.shape)
 
         return outputs, None

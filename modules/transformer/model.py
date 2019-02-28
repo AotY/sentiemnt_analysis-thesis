@@ -18,6 +18,8 @@ class Transformer(nn.Module):
     def __init__(self, config, embedding):
         super().__init__()
 
+        self.problem = config.problem
+
         self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
 
@@ -34,20 +36,13 @@ class Transformer(nn.Module):
         )
 
         if self.model_type == 'transformer':
-            self.linear_final = nn.Linear(
-                self.embedding_size * self.max_len,
-                self.n_classes,
-            )
+            in_feature_size = self.embedding_size * self.max_len
         elif self.model_type == 'transformer_mean':
             self.linear_dense = nn.Linear(
                 self.embedding_size,
-                self.dense_size,
+                self.dense_size
             )
-
-            self.linear_final = nn.Linear(
-                self.dense_size,
-                self.n_classes,
-            )
+            in_feature_size = self.dense_size
 
         elif self.model_type == 'transformer_rnn':
             self.bidirection_num = 2 if config.bidirectional else 1
@@ -63,25 +58,24 @@ class Transformer(nn.Module):
                 dropout=config.dropout
             )
 
-            self.linear_final = nn.Linear(
-                self.hidden_size * self.bidirection_num,
-                self.n_classes,
-            )
+            in_feature_size = self.dense_size = self.hidden_size * self.bidirection_num
         elif self.model_type == 'transformer_weight':
             # W_s1
-            self.linear_first = torch.nn.Linear(
-                self.embedding_size, config.dense_size)
+            self.linear_first = torch.nn.Linear(self.embedding_size, config.dense_size)
             self.linear_first.bias.data.fill_(0)
 
             # W_s2
-            self.linear_second = torch.nn.Linear(
-                config.dense_size, config.heads)
+            self.linear_second = torch.nn.Linear(config.dense_size, config.num_heads)
             self.linear_second.bias.data.fill_(0)
+            in_feature_size = config.max_len * config.num_heads
 
-            self.linear_final = nn.Linear(
-                config.max_len * config.heads, self.n_classes)
+        if self.problem == 'classification':
+            self.linear_final = nn.Linear(in_feature_size, config.n_classes)
+        else:
+            self.linear_regression_dense = nn.Linear(in_feature_size, config.regression_dense_size)
+            self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
 
-        nn.init.xavier_normal_(self.linear_final.weight)
+        # nn.init.xavier_normal_(self.linear_final.weight)
 
     def forward(self,
                 inputs,
@@ -98,30 +92,35 @@ class Transformer(nn.Module):
         # print('attns[0] shape: ', attns[0].shape)
         # print('attns[-1] shape: ', attns[-1].shape)
 
+
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
             # [batch_size, max_len * embedding_size]
             outputs = outputs.view(outputs.size(0), -1)
-            outputs = self.linear_final(outputs)
         elif self.model_type == 'transformer_mean':  # mean, average
             # [batch_size, embedding_size]
             outputs = outputs.mean(dim=1)
             outputs = self.linear_dense(outputs)
-            outputs = F.relu(outputs, dim=1)
+            outputs = F.relu(outputs)
             # [batch_size, n_classes]
-            outputs = self.linear_final(outputs)
         elif self.model_type == 'transformer_rnn':  # with or without position embedding
             outputs, _ = self.rnn(outputs.transpose(0, 1))
-            outputs = self.linear_final(outputs[-1])
+            outputs = outputs[-1]
         elif self.model_type == 'transformer_weight':
             # [batch_size, max_len, dense_size]
             x = F.tanh(self.linear_first(outputs))
 
-            # [batch_size, max_len, heads]
+            # [batch_size, max_len, num_heads]
             x = self.linear_second(outputs)
 
             # [batch_size, n_classes]
-            outputs = self.linear_final(x.view(x.size(0), -1))
+            outputs = x.view(x.size(0), -1)
+
+        if self.problem == 'classification':
+            outputs = self.linear_final(outputs)
+        else:
+            outputs = self.linear_regression_dense(outputs)
+            outputs = self.linear_regression_final(outputs)
 
         # [batch_size, vocab_size]
         return outputs, attns

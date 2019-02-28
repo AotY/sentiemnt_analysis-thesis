@@ -23,17 +23,19 @@ def load_data(config, vocab):
         with open(config.data_path, 'r') as f:
             for line in tqdm(f):
                 line = line.rstrip()
-                disease, doctor, date, label, text = line.split('\t')
-
+                # disease, doctor, date, label, text = line.split('\t')
+                label, text = line.split('\t')
+                    
                 tokens = text.split()
-                tokens = [token.split()[0]
-                          for token in tokens if len(token.split()) > 0]
+                tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
                 if len(tokens) < config.min_len:
                     continue
 
                 ids = vocab.words_to_id(tokens)
 
                 label = int(label)
+                if config.problem == 'classification':
+                    label -= 1
 
                 datas.append((ids, label))
         pickle.dump(datas, open(datas_pkl_path, 'wb'))

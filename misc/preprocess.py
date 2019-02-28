@@ -70,10 +70,13 @@ def cleaning_stats():
                     if not bool(score) or not bool(text):
                         continue
 
-                    unique_line = "{} {} {} {} {}".format(disease, doctor, date, score, text)
-                    if unique_line in line_set:
+                    if len(text) < args.min_len or len(text) > args.max_len:
                         continue
-                    line_set.add(unique_line)
+
+                    line_str = "{}_{}_{}_{}_{}".format(disease, doctor, date, score, text)
+                    if line_str in line_set:
+                        continue
+                    line_set.add(line_str)
 
                     # format date
                     date = re.findall(r'\d+', date)
@@ -82,29 +85,29 @@ def cleaning_stats():
 
                     # label
                     if score in ['1', '2']:
-                        label = 0
-                    elif score in ['3']:
                         label = 1
-                    elif score in ['4', '5']:
+                    elif score in ['3']:
                         label = 2
+                    elif score in ['4', '5']:
+                        label = 3
                     else:
                         raise ValueError('score: %s is not valid.' % score)
+
                     label_dict.update(str(label))
 
                     score_dict.update(str(score))
 
                     tokens = tokenizer.tokenize(text)
                     freq_dict.update(tokens)
-                    len_dict[len(tokens)] = len_dict.get(len(tokens), 0) + 1
 
-                    if len(tokens) < args.min_len or len(tokens) > args.max_len:
-                        continue
+                    len_dict[len(tokens)] = len_dict.get(len(tokens), 0) + 1
 
                     text = ' '.join(tokens)
 
                     # split by score
-                    score_files[int(score) - 1].write('%s\t%s\t%s\t%s\t%s\n' % (
-                        disease, doctor, date, score, text.replace(' ', '')))
+                    # score_files[int(score) - 1].write('%s\t%s\t%s\t%s\t%s\n' % (
+                        # disease, doctor, date, score, text.replace(' ', '')))
+                    score_files[int(score) - 1].write('%s\t%s\n' % (score, text.replace(' ', '')))
 
                     cleaned_datas.append((disease, doctor, date, score, label, text))
                 del line_set
@@ -115,11 +118,13 @@ def cleaning_stats():
     # re write
     for item in cleaned_datas:
         disease, doctor, date, score, label, text = item
-        label_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
-            disease, doctor, date, label, text))
+        # label_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
+            # disease, doctor, date, label, text))
+        label_cleaned_file.write('%s\t%s\n' % (label, text))
 
-        score_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
-            disease, doctor, date, score, text))
+        # score_cleaned_file.write('%s\t%s\t%s\t%s\t%s\n' % (
+            # disease, doctor, date, score, text))
+        score_cleaned_file.write('%s\t%s\n' % (score, text))
 
     label_cleaned_file.close()
     score_cleaned_file.close()
@@ -138,7 +143,7 @@ def main():
 
     len_list = sorted(len_dict.items(),
                       key=lambda item: item[0], reverse=False)
-    save_distribution(len_list, os.path.join(args.save_dir, 'len.dist'), percentage=True)
+    save_distribution(len_list, os.path.join(args.save_dir, 'len.dist'), percentage=False)
 
     label_list = sorted(label_dict.items(),
                       key=lambda item: item[0], reverse=False)

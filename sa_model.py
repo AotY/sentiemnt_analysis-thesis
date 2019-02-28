@@ -77,7 +77,7 @@ class SAModel(nn.Module):
             inputs_pos: [max_len, batch_size]
             lengths: [batch_size]
         '''
-        if self.config.model_type == 'rnn':
+        if self.config.model_type in ['rnn', 'rnn_attention']:
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
                 inputs,

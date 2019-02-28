@@ -49,6 +49,8 @@ class StructuredSelfAttention(nn.Module):
         """
         super(StructuredSelfAttention,self).__init__()
 
+        self.problem = config.problem
+
         # embedding
         self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
@@ -82,7 +84,11 @@ class StructuredSelfAttention(nn.Module):
         self.linear_second = torch.nn.Linear(config.dense_size, self.num_heads)
         self.linear_second.bias.data.fill_(0)
 
-        self.linear_final = nn.Linear(self.hidden_size * self.bidirection_num, config.n_classes)
+        if self.problem == 'classification':
+            self.linear_final = nn.Linear(self.hidden_size * self.bidirection_num, config.n_classes)
+        else:
+            self.linear_regression_dense = nn.Linear(self.hidden_size * self.bidirection_num, config.regression_dense_size)
+            self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         """
@@ -130,10 +136,14 @@ class StructuredSelfAttention(nn.Module):
         avg_sentence_embeddings = torch.sum(sentence_embeddings, dim=1) / self.num_heads
 
         # [batch_size, n_classes]
-        outputs = self.linear_final(avg_sentence_embeddings)
+        if self.problem == 'classification':
+            outputs = self.linear_final(avg_sentence_embeddings)
+            #  output = F.sigmoid(self.linear_final(avg_sentence_embeddings))
+        else:
+            outputs = self.linear_regression_dense(avg_sentence_embeddings)
+            outputs = self.linear_regression_final(outputs)
 
         return outputs, attns
-        #  output = F.sigmoid(self.linear_final(avg_sentence_embeddings))
 
     def l2_matrix_norm(self, M):
         """

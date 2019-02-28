@@ -48,6 +48,7 @@ parser.add_argument('--num_layers', type=int)
 parser.add_argument('--transformer_size', type=int)
 parser.add_argument('--inner_hidden_size', type=int)
 parser.add_argument('--dense_size', type=int)
+parser.add_argument('--regression_dense_size', type=int)
 parser.add_argument('--use_pretrained_embedding', action='store_true')
 parser.add_argument('--n_classes', type=int)
 parser.add_argument('--t_num_layers', type=int)
@@ -179,7 +180,6 @@ def train_epochs():
         print('[ Epoch', epoch, ']')
 
         start = time.time()
-
         if args.problem == 'classification':
             train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
@@ -193,6 +193,11 @@ def train_epochs():
                   )
         else:
             train_loss = train(epoch)
+            print(' (Training) loss: {loss: 8.5f}, '
+                  'elapse: {elapse:3.3f}min'.format(
+                      loss=train_loss,
+                      elapse=(time.time()-start)/60)
+                  )
 
         start = time.time()
         if args.problem == 'classification':
@@ -209,6 +214,11 @@ def train_epochs():
             valid_accuracies += [valid_accuracy]
         else:
             valid_loss = eval(epoch)
+            print(' (Validataion) loss: {loss: 8.5f}, '
+                  'elapse: {elapse:3.3f}min'.format(
+                      loss=valid_loss,
+                      elapse=(time.time()-start)/60)
+                  )
 
         # is early_stopping
         is_stop = early_stopping.step(valid_loss)
@@ -234,9 +244,8 @@ def train_epochs():
                             accuracy=100*valid_accuracy))
                 else:
                     model_name = os.path.join(
-                        args.save_model,
-                        'regression.loss_{loss:8.5f}.pth'.format(
-                            loss=valid_loss))
+                        args.save_model, 
+                        'regression.loss_{loss:6.5f}.pth'.format(loss=valid_loss))
 
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
@@ -270,25 +279,21 @@ def train_epochs():
                 else:
                     log_tf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
-                        loss=train_loss,
-                    ))
+                        loss=train_loss,))
                     log_vf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
-                        loss=valid_loss,
-                    ))
+                        loss=valid_loss,))
 
         if is_stop:
             print('Early Stopping.\n')
             sys.exit(0)
-
-# train
-
 
 def train(epoch):
     ''' Epoch operation in training phase'''
     model.train()
 
     total_loss = 0
+    total_label = 0
     times = 0
     if args.problem == 'classification':
         total_accuracy = 0
@@ -310,18 +315,20 @@ def train(epoch):
         # forward
         optimizer.zero_grad()
 
+        loss = 0
+
         outputs, attns = model(
             inputs,
             lengths=lengths,
             inputs_pos=inputs_pos
         )
 
-        # backward
         if args.problem == 'classification':
             loss, accuracy, recall, f1 = cal_performance(outputs, labels)
         else:
             loss = cal_performance(outputs, labels)
 
+        # backward
         loss.backward()
 
         # update parameters
@@ -329,13 +336,15 @@ def train(epoch):
 
         # note keeping
         total_loss += loss.item()
+        total_label += labels.size(0)
         times += 1
         if args.problem == 'classification':
             total_accuracy += accuracy
             total_recall += recall
             total_f1 += f1
 
-    avg_loss = total_loss / times
+    # avg_loss = total_loss / times
+    avg_loss = total_loss / total_label
     if args.problem == 'classification':
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
@@ -350,6 +359,7 @@ def eval(epoch):
     model.eval()
 
     total_loss = 0
+    total_label = 0
     times = 0
     if args.problem == 'classification':
         total_accuracy = 0
@@ -373,21 +383,23 @@ def eval(epoch):
                 inputs_pos=inputs_pos
             )
 
-            # backward
-            loss, accuracy, recall, f1 = cal_performance(
-                outputs,
-                labels,
-            )
+            if args.problem == 'classification':
+                loss, accuracy, recall, f1 = cal_performance(outputs, labels)
+            else:
+                loss = cal_performance(outputs, labels)
 
             # note keeping
             total_loss += loss.item()
+
             times += 1
+            total_label += labels.size(0)
             if args.problem == 'classification':
                 total_accuracy += accuracy
                 total_recall += recall
                 total_f1 += f1
 
-    avg_loss = total_loss / times
+    # avg_loss = total_loss / times
+    avg_loss = total_loss / total_label
     if args.problem == 'classification':
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
@@ -449,7 +461,7 @@ def test():
         else:
             # outputs: [1, 1]
             print('outputs: ', outputs)
-            print('text: %s, label: %d' % (args.text, outputs.item()))
+            print('text: %s, score: %f' % (args.text, outputs.item()))
 
 
 def visualize_self_attention(attns, ids):
@@ -494,7 +506,9 @@ def cal_performance(pred, gold):
     # pred: [batch_size, n_classes]
     # gold: [batch_size]
     # print('pred shape: ', pred.shape)
+    # print('pred : {}'.format(pred))
     # print('gold shape: ', gold.shape)
+    # print('gold : {}'.format(gold))
 
     loss = cal_loss(pred, gold, args.smoothing)
 
@@ -505,7 +519,7 @@ def cal_performance(pred, gold):
         # [batch_size]
         gold = gold.contiguous().view(-1)
 
-        accuracy = accuracy_score(gold.tolist(), pred.tolist())
+        accuracy = accuracy_score(gold.cpu().tolist(), pred.cpu().tolist())
         recall = recall_score(gold.tolist(), pred.tolist(), average='micro')
         f1 = f1_score(gold.tolist(), pred.tolist(), average='micro')
 
@@ -516,7 +530,6 @@ def cal_performance(pred, gold):
 
 def cal_loss(pred, gold, smoothing):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
-
     if args.problem == 'classification':
         # [max_len * batch_size]
         gold = gold.contiguous().view(-1)
@@ -542,7 +555,11 @@ def cal_loss(pred, gold, smoothing):
                 loss = F.cross_entropy(pred, gold, reduction='sum')
     else:
         # pred: [batch_size, 1], gold: [batch_size, 1]
-        loss = F.smooth_l1_loss(input=pred, target=gold)
+        gold = gold.float()
+        # print('pred: ', pred)
+        # print('gold: ', gold)
+        # loss = F.smooth_l1_loss(input=pred, target=gold, reduction='mean')
+        loss = F.mse_loss(input=pred, target=gold, reduction='sum')
 
     return loss
 
@@ -564,23 +581,28 @@ if __name__ == '__main__':
         args = checkpoint['settings']
 
         epoch = checkpoint['epoch']
-
         args.start_epoch = epoch + 1
-        valid_loss = checkpoint['valid_loss']
-        valid_accuracy = checkpoint['valid_accuracy']
-        valid_recall = checkpoint['valid_recall']
-        valid_f1 = checkpoint['valid_f1']
 
-        print(
-            '  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '
-            'accuracy: {accuracy:3.3f}%, recall: {recall:3.3f}%, f1: {f1:3.3f}%'.format(
-                epoch=epoch,
-                loss=valid_loss,
-                accuracy=100*valid_accuracy,
-                recall=100*valid_recall,
-                f1=100*valid_f1
-            )
-        )
+        valid_loss = checkpoint['valid_loss']
+        if args.problem == 'classification':
+            valid_accuracy = checkpoint['valid_accuracy']
+            valid_recall = checkpoint['valid_recall']
+            valid_f1 = checkpoint['valid_f1']
+
+            print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '
+                'accuracy: {accuracy:3.3f}%, recall: {recall:3.3f}%, f1: {f1:3.3f}%'.format(
+                    epoch=epoch,
+                    loss=valid_loss,
+                    accuracy=100*valid_accuracy,
+                    recall=100*valid_recall,
+                    f1=100*valid_f1))
+        else:
+            print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '.format(
+                    epoch=epoch,
+                    loss=valid_loss))
+
+        args.log_mode = 'a'
+
 
     args.mode = mode
     args.epochs = epochs
