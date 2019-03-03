@@ -35,6 +35,7 @@ tokenizer = Tokenizer()
 
 
 def cleaning_stats():
+    print('cleaning data...')
     len_dict = {}
     freq_dict = Counter()
 
@@ -46,9 +47,14 @@ def cleaning_stats():
     for i in range(5):
         score_files[i] = open(os.path.join(args.save_dir, 'score.%d.txt' % (i+1)), 'w', encoding='utf-8')
 
+    label_files = [None] * 3
+    for i in range(3):
+        label_files[i] = open(os.path.join(args.save_dir, 'label.%d.txt' % (i+1)), 'w', encoding='utf-8')
+
     label_cleaned_file = open(args.label_cleaned_path, 'w', encoding='utf-8')
     score_cleaned_file = open(args.score_cleaned_path, 'w', encoding='utf-8')
     cleaned_datas = list()
+    error_lines = 0
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
             #  print('dir_name ---------> %s' % dir_name)
@@ -64,7 +70,8 @@ def cleaning_stats():
                         disease, doctor, date, score, text = line.split('\t')
                     except ValueError as e:
                         print(line)
-                        print(e)
+                        #  print(e)
+                        error_lines += 1
                         continue
 
                     if not bool(score) or not bool(text):
@@ -109,11 +116,14 @@ def cleaning_stats():
                         # disease, doctor, date, score, text.replace(' ', '')))
                     score_files[int(score) - 1].write('%s\t%s\n' % (score, text.replace(' ', '')))
 
+                    label_files[int(label) - 1].write('%s\t%s\n' % (label, text.replace(' ', '')))
+
                     cleaned_datas.append((disease, doctor, date, score, label, text))
                 del line_set
 
     # shuffle
     random.shuffle(cleaned_datas)
+    print('error_lines: %d' % error_lines)
 
     # re write
     for item in cleaned_datas:
