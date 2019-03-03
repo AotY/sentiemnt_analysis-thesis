@@ -18,7 +18,7 @@ python train.py \
     --data_dir data/ \
     --visualization_dir visualization/ \
     --log log/ \
-    --problem regression \
+    --problem classification \
     --model_type cnn \
     --n_classes 5 \
     --rnn_type LSTM \
@@ -43,9 +43,9 @@ python train.py \
     --lr 0.001 \
     --max_grad_norm 2.0 \
     --min_len 2 \
-    --max_len 35 \
+    --max_len 40 \
     --batch_size 64 \
-    --valid_split 0.2 \
+    --valid_split 0.15 \
     --test_split 7 \
     --epochs 30 \
     --start_epoch 1 \
@@ -56,6 +56,7 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
+    --sampler \
     #--checkpoint ./models/regression.loss_0.82046.pth \
     #--text 太差了，态度差，排队慢。
     #--text 医生医术很高超，还有态度很棒！

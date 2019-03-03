@@ -44,6 +44,7 @@ parser.add_argument('--embedding_size', type=int)
 parser.add_argument('--hidden_size', type=int)
 parser.add_argument('--bidirectional', action='store_true')
 parser.add_argument('--use_pos', action='store_true')
+parser.add_argument('--sampler', action='store_true')
 parser.add_argument('--num_layers', type=int)
 parser.add_argument('--transformer_size', type=int)
 parser.add_argument('--inner_hidden_size', type=int)
@@ -336,21 +337,21 @@ def train(epoch):
 
         # note keeping
         total_loss += loss.item()
-        total_label += labels.size(0)
         times += 1
         if args.problem == 'classification':
+            total_label += labels.size(0)
             total_accuracy += accuracy
             total_recall += recall
             total_f1 += f1
 
-    # avg_loss = total_loss / times
-    avg_loss = total_loss / total_label
     if args.problem == 'classification':
+        avg_loss = total_loss / total_label
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
         return avg_loss, avg_accuracy, avg_recall, avg_f1
     else:
+        avg_loss = total_loss / times
         return avg_loss
 
 
@@ -392,20 +393,20 @@ def eval(epoch):
             total_loss += loss.item()
 
             times += 1
-            total_label += labels.size(0)
             if args.problem == 'classification':
+                total_label += labels.size(0)
                 total_accuracy += accuracy
                 total_recall += recall
                 total_f1 += f1
 
-    # avg_loss = total_loss / times
-    avg_loss = total_loss / total_label
     if args.problem == 'classification':
+        avg_loss = total_loss / total_label
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
         return avg_loss, avg_accuracy, avg_recall, avg_f1
     else:
+        avg_loss = total_loss / times
         return avg_loss
 
 
@@ -549,8 +550,7 @@ def cal_loss(pred, gold, smoothing):
         else:
             if args.classes_weight is not None and len(args.classes_weight) != 0:
                 weight = torch.tensor(args.classes_weight, device=device)
-                loss = F.cross_entropy(
-                    pred, gold, weight=weight, reduction='sum')
+                loss = F.cross_entropy(pred, gold, weight=weight, reduction='sum')
             else:
                 loss = F.cross_entropy(pred, gold, reduction='sum')
     else:
@@ -559,7 +559,7 @@ def cal_loss(pred, gold, smoothing):
         # print('pred: ', pred)
         # print('gold: ', gold)
         # loss = F.smooth_l1_loss(input=pred, target=gold, reduction='mean')
-        loss = F.mse_loss(input=pred, target=gold, reduction='sum')
+        loss = F.mse_loss(input=pred, target=gold, reduction='mean')
 
     return loss
 
