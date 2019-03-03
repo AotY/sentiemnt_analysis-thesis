@@ -10,6 +10,7 @@ __pycache__
 ### Data
 *.scel
 data/
+data_raw/
 data/dict/
 data/*.dict
 data/*.pkl
