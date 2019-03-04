@@ -101,7 +101,6 @@ class SAModel(nn.Module):
                 inputs,
                 lengths
             )
-        #  elif config.model_type in ['transformer', 'transformer_rnn', 'transformer_weight']:
         elif self.config.model_type.find('transformer') != -1:
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
@@ -111,6 +110,6 @@ class SAModel(nn.Module):
             )
 
         return outputs, attns
-    
+
     def test(self, input, input_pos):
         pass

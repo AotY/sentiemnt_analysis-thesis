@@ -8,8 +8,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.transformer.encoder import Encoder
+#  from modules.transformer.encoder import Encoder
 from modules.utils import rnn_factory
+from modules.transformer.layers import EncoderLayer
+from modules.transformer.utils import get_sinusoid_encoding_table
+from modules.transformer.utils import get_attn_key_pad_mask
+from modules.transformer.utils import get_non_pad_mask
+
+from misc.vocab import PAD_ID
 
 
 class Transformer(nn.Module):
@@ -20,8 +26,8 @@ class Transformer(nn.Module):
 
         self.problem = config.problem
 
+        self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
-        # self.embedding = embedding
 
         self.model_type = config.model_type
         self.n_classes = config.n_classes
@@ -30,7 +36,22 @@ class Transformer(nn.Module):
         #  self.transformer_size = config.transformer_size
         self.max_len = config.max_len
 
-        self.encoder = Encoder(config, embedding)
+        #  self.encoder = Encoder(config, embedding)
+        self.use_pos = config.use_pos
+
+        self.dropout = nn.Dropout(config.dropout)
+
+        if self.use_pos:
+            n_position = config.max_len + 1
+            self.pos_embedding = nn.Embedding.from_pretrained(
+                get_sinusoid_encoding_table(n_position,
+                                            self.embedding_size,
+                                            padid=PAD_ID),
+                freeze=True)
+
+        self.layer_stack = nn.ModuleList([
+            EncoderLayer(config) for _ in range(config.t_num_layers)]
+        )
 
         if self.model_type == 'transformer':
             in_feature_size = self.embedding_size * self.max_len
@@ -65,6 +86,12 @@ class Transformer(nn.Module):
             self.linear_second = torch.nn.Linear(config.dense_size, config.num_heads)
             self.linear_second.bias.data.fill_(0)
             in_feature_size = config.max_len * config.num_heads
+        elif self.model_type == 'transformer_maxpool_concat': # and transformer_maxpool_residual
+            self.W2 = nn.Linear(self.embedding_size + self.embedding_size, self.embedding_size)
+            in_feature_size = self.embedding_size
+        elif self.model_type == 'transformer_maxpool_residual':
+            #  self.layer_norm = nn.LayerNorm(config.embedding_size)
+            in_feature_size = self.embedding_size
 
         if self.problem == 'classification':
             self.linear_final = nn.Linear(in_feature_size, config.n_classes)
@@ -81,14 +108,41 @@ class Transformer(nn.Module):
         Args:
             inputs: [batch_size, max_len]
             inputs_pos: [batch_size, max_len]
-        return: [batch_size, n_classes], [batch_size * num_heads, max_len, max_len] list
+        return:
+            outputs: [batch_size, n_classes]
+            attns: [batch_size * num_heads, max_len, max_len] list
         """
-        # [batch_size, max_len, embedding_size] list
-        outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
-        # print('outputs shape: ', outputs.shape)
-        # print('attns[0] shape: ', attns[0].shape)
-        # print('attns[-1] shape: ', attns[-1].shape)
+        slf_attn_list = list()
+        # [batch_size, ]
+        attn_mask = get_attn_key_pad_mask(k=inputs, q=inputs, padid=PAD_ID)
 
+        # [batch_size, ]
+        non_pad_mask = get_non_pad_mask(inputs, PAD_ID)
+
+        # [batch_size, max_len, embedding_size]
+        embedded = self.embedding(inputs)
+
+        embedded = self.dropout(embedded)
+
+        if self.use_pos:
+            pos_embedded = self.pos_embedding(enc_inputs_pos).to(inputs.device)
+            embedded = embedded + pos_embedded
+
+        if self.model_type.count('residual') != -1:
+            residual = embedded
+
+        outputs = embedded
+        for layer in self.layer_stack:
+            outputs, slf_attn = layer(
+                outputs,
+                non_pad_mask=non_pad_mask,
+                attn_mask=attn_mask
+            )
+
+            slf_attn_list.append(slf_attn)
+
+        # [batch_size, max_len, embedding_size] list
+        #  outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
 
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
@@ -106,12 +160,23 @@ class Transformer(nn.Module):
         elif self.model_type == 'transformer_weight':
             # [batch_size, max_len, dense_size]
             x = F.tanh(self.linear_first(outputs))
-
             # [batch_size, max_len, num_heads]
             x = self.linear_second(outputs)
-
-            # [batch_size, n_classes]
+            # [batch_size, max_len * num_heads]
             outputs = x.view(x.size(0), -1)
+        elif self.model_type == 'transformer_maxpool_concat':
+            outputs = torch.cat((outputs, residual), dim=2).permute(1, 0, 2)
+            outputs = self.W2(outputs)
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
+        elif self.model_type == 'transformer_maxpool_residual':
+            outputs = outputs + residual
+            #  outputs = self.layer_norm(outputs + residual)
+            outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
 
         if self.problem == 'classification':
             outputs = self.linear_final(outputs)
@@ -120,4 +185,4 @@ class Transformer(nn.Module):
             outputs = self.linear_regression_final(outputs)
 
         # [batch_size, vocab_size]
-        return outputs, attns
+        return outputs, slf_attn_list
