@@ -41,10 +41,16 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
                 label_to_count[label] = 1
 
         # weight for each sample
-        weights = [1.0 / label_to_count[self._get_label(dataset, idx)]
+        samples_weight = [1.0 / label_to_count[self._get_label(dataset, idx)]
                    for idx in self.indices]
 
-        self.weights = torch.DoubleTensor(weights)
+        self.samples_weight = torch.DoubleTensor(samples_weight)
+
+        # weight for each label
+        min_label_count = min(label_to_count.values())
+        labels_weight = [min_label_count / label_to_count[label] for label in range(len(label_to_count))]
+        self.labels_weight = torch.FloatTensor(labels_weight)
+        self.labels_count = [label_to_count[label] for label in range(len(label_to_count))]
 
     def _get_label(self, dataset, idx):
         dataset_type = type(dataset)
@@ -53,6 +59,7 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
         elif dataset_type is torchvision.datasets.ImageFolder:
             return dataset.imgs[idx][1]
         else:
+            # print('dataset[idx] ----> ', dataset[idx])
             return dataset[idx][1]
             #  raise NotImplementedError
 
@@ -64,7 +71,7 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
         sample index is drawn for a row, it cannot be drawn again for that row.
         """
         return (self.indices[i] for i in
-                torch.multinomial(self.weights, self.num_samples, replacement=True))
+                torch.multinomial(self.samples_weight, self.num_samples, replacement=True))
 
     def __len__(self):
         return self.num_samples

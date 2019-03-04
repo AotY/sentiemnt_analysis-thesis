@@ -56,13 +56,21 @@ def build_dataloader(config, datas):
     collate_fn = MyCollate(config)
 
     # data loader
+    imbalanced_sampler = ImbalancedDatasetSampler(train_dataset)
+    config.classes_weight = imbalanced_sampler.labels_weight
+    config.classes_count = imbalanced_sampler.labels_count
+
+    train_sampler = None
+    if config.sampler:
+        train_sampler = imbalanced_sampler
+
     train_data = data.DataLoader(
         train_dataset,
         batch_size=config.batch_size,
         # shuffle=True,
         num_workers=4,
         collate_fn=collate_fn,
-        sampler=ImbalancedDatasetSampler(train_dataset) if config.sampler else None
+        sampler=train_sampler
     )
 
     valid_data = data.DataLoader(
@@ -82,7 +90,7 @@ def build_dataloader(config, datas):
         collate_fn=collate_fn,
     )
 
-    return train_data, valid_data, test_data
+    return train_data, valid_data, test_data, config
 
 
 class Dataset(data.Dataset):

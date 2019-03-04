@@ -27,13 +27,13 @@ class Encoder(nn.Module):
 
         self.dropout = nn.Dropout(config.dropout)
 
-        n_position = config.max_len + 1
-        self.pos_embedding = nn.Embedding.from_pretrained(
-            get_sinusoid_encoding_table(n_position,
-                                        self.embedding_size,
-                                        padid=PAD_ID),
-            freeze=True
-        )
+        if self.use_pos:
+            n_position = config.max_len + 1
+            self.pos_embedding = nn.Embedding.from_pretrained(
+                get_sinusoid_encoding_table(n_position,
+                                            self.embedding_size,
+                                            padid=PAD_ID),
+                freeze=True)
 
         self.layer_stack = nn.ModuleList([
             EncoderLayer(config) for _ in range(config.t_num_layers)]

@@ -23,6 +23,7 @@ class RCNNEncoder(nn.Module):
                  embedding):
         super(RCNNEncoder, self).__init__()
 
+        self.problem = config.problem
         self.model_type = config.model_type
         self.rnn_type = config.rnn_type
 
@@ -69,7 +70,7 @@ class RCNNEncoder(nn.Module):
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
 
-        print('embedded shape: ', embedded.shape)
+        # print('embedded shape: ', embedded.shape)
         if lengths is not None:
             rnn_inputs = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
@@ -80,7 +81,7 @@ class RCNNEncoder(nn.Module):
 
         if lengths is not None:
             outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=embedded.size(0))
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
         # [batch_size, max_len, hidden_size + embedding_size]
         outputs = torch.cat((outputs, embedded), dim=2).permute(1, 0, 2)
@@ -93,7 +94,7 @@ class RCNNEncoder(nn.Module):
 
         # [batch_size, hidden_size, 1]
         outputs = F.max_pool1d(outputs, outputs.size(2))
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
         # [batch_size, hidden_size]
         outputs = outputs.squeeze(2)
@@ -103,7 +104,7 @@ class RCNNEncoder(nn.Module):
         else:
             outputs = self.linear_regression_dense(outputs)
             outputs = self.linear_regression_final(outputs)
-        print('outputs shape: ', outputs.shape)
+        # print('outputs shape: ', outputs.shape)
 
         return outputs, None
 

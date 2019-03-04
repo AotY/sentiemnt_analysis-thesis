@@ -20,8 +20,8 @@ class Transformer(nn.Module):
 
         self.problem = config.problem
 
-        self.embedding = embedding
         self.embedding_size = embedding.embedding_dim
+        # self.embedding = embedding
 
         self.model_type = config.model_type
         self.n_classes = config.n_classes
@@ -30,19 +30,16 @@ class Transformer(nn.Module):
         #  self.transformer_size = config.transformer_size
         self.max_len = config.max_len
 
-        self.encoder = Encoder(
-            config,
-            embedding
-        )
+        self.encoder = Encoder(config, embedding)
 
         if self.model_type == 'transformer':
             in_feature_size = self.embedding_size * self.max_len
         elif self.model_type == 'transformer_mean':
-            self.linear_dense = nn.Linear(
-                self.embedding_size,
-                self.dense_size
-            )
-            in_feature_size = self.dense_size
+            # self.linear_dense = nn.Linear(
+                # self.embedding_size,
+                # self.dense_size
+            # )
+            in_feature_size = self.embedding_size
 
         elif self.model_type == 'transformer_rnn':
             self.bidirection_num = 2 if config.bidirectional else 1
@@ -100,8 +97,8 @@ class Transformer(nn.Module):
         elif self.model_type == 'transformer_mean':  # mean, average
             # [batch_size, embedding_size]
             outputs = outputs.mean(dim=1)
-            outputs = self.linear_dense(outputs)
-            outputs = F.relu(outputs)
+            # outputs = self.linear_dense(outputs)
+            # outputs = F.relu(outputs)
             # [batch_size, n_classes]
         elif self.model_type == 'transformer_rnn':  # with or without position embedding
             outputs, _ = self.rnn(outputs.transpose(0, 1))

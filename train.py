@@ -89,6 +89,7 @@ parser.add_argument('--problem', type=str, help='classification or regression')
 parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
 parser.add_argument('--classes_weight', nargs='+', type=float, help='')
+parser.add_argument('--classes_count', nargs='+', type=float, help='')
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -107,7 +108,10 @@ print('vocab size: ', args.vocab_size)
 datas = load_data(args, vocab)
 
 # dataset, data_load
-train_data, valid_data, test_data = build_dataloader(args, datas)
+train_data, valid_data, test_data, args = build_dataloader(args, datas)
+args.classes_weight = args.classes_weight.to(device)
+print('train classes_count: {}'.format(args.classes_count))
+print('train classes_weight: {}'.format(args.classes_weight))
 
 # load pretrained embedding TODO
 pretrained_embedding = None
@@ -160,8 +164,8 @@ def train_epochs():
     log_valid_file = None
 
     if args.log:
-        log_train_file = os.path.join(args.log, 'train.log')
-        log_valid_file = os.path.join(args.log, 'valid.log')
+        log_train_file = os.path.join(args.log, 'train.%s.%s.log' % (args.problem, args.model_type))
+        log_valid_file = os.path.join(args.log, 'valid.%s.%s.log' % (args.problem, args.model_type))
 
         print('[Info] Training performance will be written to file: {} and {}'.format(
             log_train_file, log_valid_file))
@@ -241,21 +245,24 @@ def train_epochs():
                 if args.problem == 'classification':
                     model_name = os.path.join(
                         args.save_model,
-                        'classification.accuracy_{accuracy:3.3f}.pth'.format(
+                        'classification.{}.accuracy_{accuracy:3.3f}.pth'.format(
+                            args.model_type,
                             accuracy=100*valid_accuracy))
                 else:
                     model_name = os.path.join(
                         args.save_model, 
-                        'regression.loss_{loss:6.5f}.pth'.format(loss=valid_loss))
+                        'regression.{}.loss_{loss:6.5f}.pth'.format(
+                            args.model_type,
+                            loss=valid_loss))
 
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
                 if args.problem == 'classification':
                     model_name = os.path.join(
-                        args.save_model, 'classification.best.pth')
+                        args.save_model, 'classification.%s.best.pth' % args.model_type)
                 else:
                     model_name = os.path.join(
-                        args.save_model, 'regression.best.pth')
+                        args.save_model, 'regression.%s.best.pth' % args.model_type)
                 if valid_accuracy >= max(valid_accuracies):
                     torch.save(checkpoint, model_name)
                     print('   - [Info] The checkpoint file has been updated.')
@@ -549,8 +556,8 @@ def cal_loss(pred, gold, smoothing):
             loss = loss.sum()  # average later
         else:
             if args.classes_weight is not None and len(args.classes_weight) != 0:
-                weight = torch.tensor(args.classes_weight, device=device)
-                loss = F.cross_entropy(pred, gold, weight=weight, reduction='sum')
+                # weight = torch.tensor(args.classes_weight, device=device)
+                loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
             else:
                 loss = F.cross_entropy(pred, gold, reduction='sum')
     else:
