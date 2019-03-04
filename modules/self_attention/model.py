@@ -113,6 +113,7 @@ class StructuredSelfAttention(nn.Module):
         # [max_len, batch_size, hidden_size]
         if lengths is not None:
             outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
+            # outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, padding_value=PAD_ID, total_length=embedded.size(0))
 
         # [batch_size, max_len, dense_size]
         x = torch.tanh(self.linear_first(outputs.transpose(0, 1)))

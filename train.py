@@ -339,11 +339,14 @@ def train(epoch):
                 loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
-                attnsT = attns.tranpose(1, 2)
+                attnsT = attns.transpose(1, 2)
                 # [num_heads, num_heads]
                 identity = torch.eye(attns.size(1), device=device)
                 # [batch_size, num_heads, num_heads]
-                identity = identity.unsqueeze(0).expand(args.batch_size, attns.size(1), attns.size(1))
+                identity = identity.unsqueeze(0).expand(attns.size(0), attns.size(1), attns.size(1))
+                # print('attns: ', attns.shape)
+                # print('attnsT: ', attnsT.shape)
+                # print('identity: ', identity.shape)
 
                 penalization = model.encoder.l2_matrix_norm(attns @ attnsT - identity)
 
@@ -354,7 +357,7 @@ def train(epoch):
                 loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
 
         else:
-            loss = cal_performance(outputs.double(), labels)
+            loss = cal_performance(outputs.double(), labels.double())
 
         # backward
         loss.backward()
@@ -412,9 +415,9 @@ def eval(epoch):
             )
 
             if args.problem == 'classification':
-                loss, accuracy, recall, f1 = cal_performance(outputs, labels)
+                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
             else:
-                loss = cal_performance(outputs, labels)
+                loss = cal_performance(outputs.double(), labels.double())
 
             # note keeping
             total_loss += loss.item()

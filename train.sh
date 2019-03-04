@@ -19,7 +19,7 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type self_attention \
+    --model_type transformer_maxpool_concat \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 256 \
@@ -56,8 +56,8 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
-    # --use_penalization \
-    # --penalization_coeff 0.0 \
+    --use_penalization \
+    --penalization_coeff 0.0 \
     # --use_pos \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \

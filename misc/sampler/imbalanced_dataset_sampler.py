@@ -49,7 +49,7 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
         # weight for each label
         min_label_count = min(label_to_count.values())
         labels_weight = [min_label_count / label_to_count[label] for label in range(len(label_to_count))]
-        self.labels_weight = torch.FloatTensor(labels_weight)
+        self.labels_weight = torch.DoubleTensor(labels_weight)
         self.labels_count = [label_to_count[label] for label in range(len(label_to_count))]
 
     def _get_label(self, dataset, idx):
