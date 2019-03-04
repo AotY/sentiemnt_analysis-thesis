@@ -92,7 +92,11 @@ class StructuredSelfAttention(nn.Module):
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         """
-        inputs: [max_len, batch_size]
+        Args:
+            inputs: [max_len, batch_size]
+        Returns:
+            outputs: [batch_size, n_classes]
+            attns: [batch_size, num_heads, max_len]
         """
         embedded = self.embedding(inputs)
         embedded = self.dropout(embedded)
@@ -182,6 +186,7 @@ class StructuredSelfAttention(nn.Module):
         Returns:
             regularized value
 
+        Frobenius norm of a matrix: http://mathworld.wolfram.com/FrobeniusNorm.html
         """
-        return torch.sum(torch.sum(torch.sum(M**2, 1), 1) ** 0.5).type(torch.DoubleTensor)
+        return torch.sum(torch.sum(torch.sum(M**2, 1), 1) ** 0.5).double()
 

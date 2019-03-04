@@ -81,6 +81,8 @@ parser.add_argument('--save_mode', type=str,
                     choices=['all', 'best'], default='best')
 parser.add_argument('--checkpoint', type=str, help='checkpoint path')
 parser.add_argument('--smoothing', action='store_true')
+parser.add_argument('--use_penalization', action='store_true')
+parser.add_argument('--penalization_coeff', type=float, default=0.00)
 parser.add_argument('--log', type=str, help='save log.')
 parser.add_argument('--log_mode', type=str, default='w', help='w or a')
 parser.add_argument('--seed', type=str, help='random seed')
@@ -250,7 +252,7 @@ def train_epochs():
                             accuracy=100*valid_accuracy))
                 else:
                     model_name = os.path.join(
-                        args.save_model, 
+                        args.save_model,
                         'regression.{}.loss_{loss:6.5f}.pth'.format(
                             args.model_type,
                             loss=valid_loss))
@@ -332,9 +334,27 @@ def train(epoch):
         )
 
         if args.problem == 'classification':
-            loss, accuracy, recall, f1 = cal_performance(outputs, labels)
+            # self attention, penalization AA - I
+            if args.model_type == 'self_attention' and args.use_penalization:
+                loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
+
+                # [bath_size, max_len, num_heads]
+                attnsT = attns.tranpose(1, 2)
+                # [num_heads, num_heads]
+                identity = torch.eye(attns.size(1), device=device)
+                # [batch_size, num_heads, num_heads]
+                identity = identity.unsqueeze(0).expand(args.batch_size, attns.size(1), attns.size(1))
+
+                penalization = model.encoder.l2_matrix_norm(attns @ attnsT - identity)
+
+                loss = loss + args.penalization_coeff * penalization / args.batch_size
+                #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
+                #  + C * penal/train_loader.batch_size
+            else:
+                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
+
         else:
-            loss = cal_performance(outputs, labels)
+            loss = cal_performance(outputs.double(), labels)
 
         # backward
         loss.backward()
