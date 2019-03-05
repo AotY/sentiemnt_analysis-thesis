@@ -55,6 +55,8 @@ class Transformer(nn.Module):
 
         if self.model_type == 'transformer':
             in_feature_size = self.embedding_size * self.max_len
+        elif self.model_type == 'transformer_avgpool':
+            in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_mean':
             # self.linear_dense = nn.Linear(
                 # self.embedding_size,
@@ -83,6 +85,8 @@ class Transformer(nn.Module):
             self.linear_second = torch.nn.Linear(config.dense_size, config.num_heads)
             self.linear_second.bias.data.fill_(0)
             in_feature_size = config.max_len * config.num_heads
+        elif self.model_type == 'transformer_max':
+            in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_maxpool':
             in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_maxpool_concat': # and transformer_maxpool_residual
@@ -122,7 +126,7 @@ class Transformer(nn.Module):
         embedded = self.dropout(embedded)
 
         if self.use_pos:
-            pos_embedded = self.pos_embedding(enc_inputs_pos).to(inputs.device)
+            pos_embedded = self.pos_embedding(inputs_pos).to(inputs.device)
             embedded = embedded + pos_embedded
 
         if self.model_type.count('residual') != -1:
@@ -145,6 +149,11 @@ class Transformer(nn.Module):
         if self.model_type == 'transformer':
             # [batch_size, max_len * embedding_size]
             outputs = outputs.view(outputs.size(0), -1)
+        elif self.model_type == 'transformer_avgpool':
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = F.avg_pool1d(outputs, outputs.size(2)).squeeze(2)
         elif self.model_type == 'transformer_mean':  # mean, average
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
@@ -161,6 +170,11 @@ class Transformer(nn.Module):
             outputs = self.linear_second(outputs)
             # [batch_size, max_len * num_heads]
             outputs = x.view(x.size(0), -1)
+        elif self.model_type == 'transformer_max':
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = outputs.max(dim=2)[0]
         elif self.model_type == 'transformer_maxpool':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
@@ -184,7 +198,6 @@ class Transformer(nn.Module):
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
-
         if self.problem == 'classification':
             # [batch_size, n_classes]
             outputs = self.linear_final(outputs)

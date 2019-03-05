@@ -69,7 +69,7 @@ parser.add_argument('--kernel_heights', nargs='+', type=int, help='')
 parser.add_argument('--stride', type=int)
 parser.add_argument('--padding', type=int)
 parser.add_argument('--dropout', type=float)
-parser.add_argument('--max_grad_norm', type=float, default=5.0)
+# parser.add_argument('--max_grad_norm', type=float, default=5.0)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--min_len', type=int, default=5)
 parser.add_argument('--max_len', type=int, default=60)
@@ -98,7 +98,7 @@ parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
 parser.add_argument('--classes_weight', nargs='+', type=float, help='')
 parser.add_argument('--classes_count', nargs='+', type=float, help='')
-parser.add_argument('-n_warmup_steps', type=int, default=4000)
+parser.add_argument('--n_warmup_steps', type=int, default=4000)
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -135,35 +135,41 @@ model = SAModel(
 print(model)
 
 # optimizer
-#  optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-optim = torch.optim.Adam(
-    filter(lambda x: x.requires_grad, model.parameters()),
-    #  args.lr,
-    betas=(0.9, 0.98),
-    eps=1e-09
-)
 
+"""
 optimizer = ScheduledOptimizer(
-    optim,
+    torch.optim.Adam(
+        filter(lambda x: x.requires_grad, model.parameters()),
+        args.lr,
+        betas=(0.9, 0.98),
+        eps=1e-09
+    ),
     args.embedding_size,
     args.n_warmup_steps
 )
 
-
 """
 #  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optim,
-    mode='min',
-    factor=0.1,
-    patience=args.lr_patience
+optimizer = torch.optim.Adam(
+    filter(lambda x: x.requires_grad, model.parameters()),
+    args.lr,
+    betas=(0.9, 0.98),
+    eps=1e-09
 )
 
-"""
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode='min',
+    factor=0.5,
+    min_lr=1e-08,
+    patience=args.lr_patience,
+    verbose=True
+)
+
 # early stopping
 early_stopping = EarlyStopping(
     type='min',
-    min_delta=0.001,
+    min_delta=0.00001,
     patience=args.es_patience
 )
 
@@ -236,6 +242,9 @@ def train_epochs():
                       loss=valid_loss,
                       elapse=(time.time()-start)/60)
                   )
+        
+        # update lr
+        scheduler.step(valid_loss)
 
         # is early_stopping
         is_stop = early_stopping.step(valid_loss)
@@ -244,7 +253,9 @@ def train_epochs():
             'model': model.state_dict(),
             'settings': args,
             'epoch': epoch,
-            'optimizer': optimizer._optimizer.state_dict(),
+            # 'optimizer': optimizer._optimizer.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict(),
             'valid_loss': valid_loss,
         }
         if args.problem == 'classification':
@@ -373,7 +384,8 @@ def train(epoch):
         loss.backward()
 
         # update parameters
-        optimizer.step_and_update_lr()
+        # optimizer.step_and_update_lr()
+        optimizer.step()
 
         # note keeping
         total_loss += loss.item()
@@ -629,7 +641,9 @@ if __name__ == '__main__':
         checkpoint = torch.load(args.checkpoint)
 
         model.load_state_dict(checkpoint['model'])
-        optimizer._optimizer.load_state_dict(checkpoint['optimizer'])
+        # optimizer._optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
 
         args = checkpoint['settings']
 
