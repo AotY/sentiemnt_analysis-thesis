@@ -160,8 +160,8 @@ optimizer = torch.optim.Adam(
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer,
     mode='min',
-    factor=0.5,
-    min_lr=1e-08,
+    factor=0.3,
+    #  min_lr=1e-08,
     patience=args.lr_patience,
     verbose=True
 )
@@ -242,7 +242,7 @@ def train_epochs():
                       loss=valid_loss,
                       elapse=(time.time()-start)/60)
                   )
-        
+
         # update lr
         scheduler.step(valid_loss)
 
@@ -324,9 +324,9 @@ def train(epoch):
     model.train()
 
     total_loss = 0
-    total_label = 0
     times = 0
     if args.problem == 'classification':
+        #  total_label = 0
         total_accuracy = 0
         total_recall = 0
         total_f1 = 0
@@ -391,13 +391,14 @@ def train(epoch):
         total_loss += loss.item()
         times += 1
         if args.problem == 'classification':
-            total_label += labels.size(0)
+            #  total_label += labels.size(0)
             total_accuracy += accuracy
             total_recall += recall
             total_f1 += f1
 
     if args.problem == 'classification':
-        avg_loss = total_loss / total_label
+        avg_loss = total_loss / times
+        #  avg_loss = total_loss / total_label
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
@@ -412,7 +413,7 @@ def eval(epoch):
     model.eval()
 
     total_loss = 0
-    total_label = 0
+    #  total_label = 0
     times = 0
     if args.problem == 'classification':
         total_accuracy = 0
@@ -446,13 +447,14 @@ def eval(epoch):
 
             times += 1
             if args.problem == 'classification':
-                total_label += labels.size(0)
+                #  total_label += labels.size(0)
                 total_accuracy += accuracy
                 total_recall += recall
                 total_f1 += f1
 
     if args.problem == 'classification':
-        avg_loss = total_loss / total_label
+        avg_loss = total_loss / times
+        #  avg_loss = total_loss / total_label
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
@@ -615,9 +617,11 @@ def cal_loss(pred, gold, smoothing):
         else:
             if args.classes_weight is not None and len(args.classes_weight) != 0:
                 # weight = torch.tensor(args.classes_weight, device=device)
-                loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
+                #  loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
+                loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='mean')
             else:
-                loss = F.cross_entropy(pred, gold, reduction='sum')
+                #  loss = F.cross_entropy(pred, gold, reduction='sum')
+                loss = F.cross_entropy(pred, gold, reduction='mean')
     else:
         # pred: [batch_size, 1], gold: [batch_size, 1]
         gold = gold.float()

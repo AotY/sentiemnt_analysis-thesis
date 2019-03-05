@@ -22,6 +22,7 @@ from utils import save_distribution
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_dir', type=str, default='')
+parser.add_argument('--userdict', type=str, default='')
 parser.add_argument('--label_cleaned_path', type=str, default='')
 parser.add_argument('--score_cleaned_path', type=str, default='')
 parser.add_argument('--vocab_freq_path', type=str, default='')
@@ -31,8 +32,7 @@ parser.add_argument('--min_len', type=int, default=5)
 parser.add_argument('--max_len', type=int, default=150)
 args = parser.parse_args()
 
-tokenizer = Tokenizer()
-
+tokenizer = Tokenizer(args.userdict)
 
 def cleaning_stats():
     print('cleaning data...')

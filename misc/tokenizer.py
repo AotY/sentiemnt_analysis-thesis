@@ -7,14 +7,14 @@
 """
 Tokenizer
 """
-import re
+#  import re
 import jieba
 
 
 class Tokenizer:
     def __init__(self, userdict_path=None):
         # load user dict
-        if userdict_path is not None:
+        if userdict_path is not None and userdict_path != '':
             jieba.load_userdict(userdict_path)
 
     def tokenize(self, text):
@@ -32,15 +32,27 @@ class Tokenizer:
 
         text = text.replace(':', ' : ')
         text = text.replace(',', ' , ')
-
         text = text.replace('：', ' ： ')
         text = text.replace('，', ' ， ')
         text = text.replace('。', ' 。 ')
+        text = text.replace('"', ' " ')
+        text = text.replace('“', ' “ ')
+        text = text.replace('”', ' ” ')
+
 
         tokens = list(jieba.cut(text))
-        tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
+        #  tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
 
         if len(tokens) == 0:
             return []
 
-        return tokens
+        new_tokens = list()
+        for token in tokens:
+            try:
+                float(token)
+                new_tokens.append('<NUMBER>')
+            except ValueError as e:
+                new_tokens.append(token)
+                continue
+
+        return new_tokens

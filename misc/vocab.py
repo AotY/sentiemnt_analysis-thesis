@@ -9,6 +9,7 @@ PAD = '<PAD>'
 UNK = '<UNK>'
 SOS = '<SOS>'
 EOS = '<EOS>'
+#  NUMBER = '<NUMBER>'
 
 PAD_ID = 0
 UNK_ID = 1
