@@ -10,7 +10,8 @@ https://github.com/IBM/pytorch-seq2seq/blob/master/seq2seq/optim/optim.py
 
 import torch
 import torch.nn as nn
-import itertools
+import numpy as np
+
 
 """
 https://github.com/jadore801120/attention-is-all-you-need-pytorch/blob/master/transformer/Optim.py
@@ -18,42 +19,31 @@ https://github.com/jadore801120/attention-is-all-you-need-pytorch/blob/master/tr
 class ScheduledOptimizer:
     '''A simple wrapper class for learning rate scheduling'''
 
-    def __init__(self, optimizer, scheduler, max_grad_norm=None):
-        self.optimizer = optimizer
-        self.scheduler = scheduler
-        self.max_grad_norm = max_grad_norm
+    def __init__(self, optimizer, embedding_size, n_warmup_steps):
+        self._optimizer = optimizer
+        self.n_warmup_steps = n_warmup_steps
+        self.n_current_steps = 0
+        self.init_lr = np.power(embedding_size, -0.5)
 
-    def set_scheduler(self, scheduler):
-        """ Set the learning rate scheduler.
-        Args:
-            scheduler (torch.optim.lr_scheduler.*): object of learning rate scheduler,
-               e.g. torch.optim.lr_scheduler.StepLR
-        """
-        self.scheduler = scheduler
-
-    def step(self):
+    def step_and_update_lr(self):
         "Step with the inner optimizer"
-        if self.max_grad_norm > 0:
-            params = itertools.chain.from_iterable([group['params'] for group in self.optimizer.param_groups])
-            _ = nn.utils.clip_grad_norm_(params, self.max_grad_norm)
-
-        self.optimizer.step()
+        self._update_learning_rate()
+        self._optimizer.step()
 
     def zero_grad(self):
         "Zero out the gradients by the inner optimizer"
-        self.optimizer.zero_grad()
+        self._optimizer.zero_grad()
 
-    def update(self, loss=None):
-        """ Update the learning rate if the criteria of the scheduler are met.
-        Args:
-            loss (float): The current loss.  It could be training loss or developing loss
-                depending on the caller.  By default the supervised trainer uses developing
-                loss.
-        """
-        if self.scheduler is None:
-            pass
-        elif isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            self.scheduler.step(loss)
-        else:
-            self.scheduler.step()
+    def _get_lr_scale(self):
+        return np.min([
+            np.power(self.n_current_steps, -0.5),
+            np.power(self.n_warmup_steps, -1.5) * self.n_current_steps
+        ])
 
+    def _update_learning_rate(self):
+        ''' Learning rate scheduling per step'''
+        self.n_current_steps += 1
+        lr = self.init_lr * self._get_lr_scale()
+
+        for param_group in self._optimizer.param_groups:
+            param_group['lr'] = lr

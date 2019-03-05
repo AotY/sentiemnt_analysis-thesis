@@ -20,7 +20,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-from sklearn.metrics import classification_report
+#  from sklearn.metrics import classification_report
 
 import matplotlib.pyplot as plt
 
@@ -98,6 +98,7 @@ parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
 parser.add_argument('--classes_weight', nargs='+', type=float, help='')
 parser.add_argument('--classes_count', nargs='+', type=float, help='')
+parser.add_argument('-n_warmup_steps', type=int, default=4000)
 args = parser.parse_args()
 
 print(' '.join(sys.argv))
@@ -134,14 +135,22 @@ model = SAModel(
 print(model)
 
 # optimizer
-#  optimizer = optim.Adam(model.parameters(), lr=args.lr)
+#  optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 optim = torch.optim.Adam(
-    model.parameters(),
-    args.lr,
+    filter(lambda x: x.requires_grad, model.parameters()),
+    #  args.lr,
     betas=(0.9, 0.98),
     eps=1e-09
 )
 
+optimizer = ScheduledOptimizer(
+    optim,
+    args.embedding_size,
+    args.n_warmup_steps
+)
+
+
+"""
 #  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optim,
@@ -150,12 +159,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     patience=args.lr_patience
 )
 
-optimizer = ScheduledOptimizer(
-    optim,
-    scheduler,
-    args.max_grad_norm
-)
-
+"""
 # early stopping
 early_stopping = EarlyStopping(
     type='min',
@@ -240,7 +244,7 @@ def train_epochs():
             'model': model.state_dict(),
             'settings': args,
             'epoch': epoch,
-            'optimizer': optimizer.optimizer.state_dict(),
+            'optimizer': optimizer._optimizer.state_dict(),
             'valid_loss': valid_loss,
         }
         if args.problem == 'classification':
@@ -369,7 +373,7 @@ def train(epoch):
         loss.backward()
 
         # update parameters
-        optimizer.step()
+        optimizer.step_and_update_lr()
 
         # note keeping
         total_loss += loss.item()
@@ -558,12 +562,12 @@ def cal_performance(pred, gold):
 
         accuracy = accuracy_score(gold, pred)
 
-        def intersection(list1, list2): 
-            # Use of hybrid method 
+        def intersection(list1, list2):
+            # Use of hybrid method
             temp1 = set(list1)
-            temp2 = set(list2) 
-            list3 = [value for value in temp1 if value in temp2] 
-            return list3 
+            temp2 = set(list2)
+            list3 = [value for value in temp1 if value in temp2]
+            return list3
 
         labels = intersection(gold, pred)
         # print('labels: ', labels)
@@ -625,7 +629,7 @@ if __name__ == '__main__':
         checkpoint = torch.load(args.checkpoint)
 
         model.load_state_dict(checkpoint['model'])
-        optimizer.optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer._optimizer.load_state_dict(checkpoint['optimizer'])
 
         args = checkpoint['settings']
 

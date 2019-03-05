@@ -9,6 +9,7 @@ import pickle
 import torch
 import torch.utils.data as data
 from tqdm import tqdm
+import numpy as np
 
 from misc.vocab import PAD_ID
 from misc.sampler.imbalanced_dataset_sampler import ImbalancedDatasetSampler
@@ -25,7 +26,7 @@ def load_data(config, vocab):
                 line = line.rstrip()
                 # disease, doctor, date, label, text = line.split('\t')
                 label, text = line.split('\t')
-                    
+
                 tokens = text.split()
                 tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
                 if len(tokens) < config.min_len:
@@ -38,6 +39,7 @@ def load_data(config, vocab):
                     label -= 1
 
                 datas.append((ids, label))
+        np.random.shuffle(datas)
         pickle.dump(datas, open(datas_pkl_path, 'wb'))
     else:
         datas = pickle.load(open(datas_pkl_path, 'rb'))
