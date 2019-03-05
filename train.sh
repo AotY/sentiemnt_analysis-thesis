@@ -19,17 +19,17 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type transformer_maxpool_concat \
+    --model_type transformer_maxpool \
     --n_classes 3 \
     --rnn_type LSTM \
-    --embedding_size 256 \
+    --embedding_size 512 \
     --hidden_size 256 \
     --num_layers 2 \
-    --t_num_layers 2 \
-    --transformer_size 128 \
+    --t_num_layers 6 \
+    --transformer_size 512 \
     --k_size 64 \
     --v_size 64 \
-    --inner_hidden_size 256 \
+    --inner_hidden_size 512 \
     --dense_size 128 \
     --regression_dense_size 128 \
     --num_heads 6 \
@@ -56,8 +56,8 @@ python train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
-    --use_penalization \
-    --penalization_coeff 0.0 \
+    #--use_penalization \
+    #--penalization_coeff 1.0 \
     # --use_pos \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \

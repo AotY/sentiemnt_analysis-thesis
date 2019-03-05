@@ -7,14 +7,20 @@ import os
 import sys
 import time
 import argparse
+
+# import warnings
+# warnings.filterwarnings('ignore')  # "error", "ignore", "always", "default", "module" or "once"
+
 import torch
 import torch.nn.functional as F
 
 from tqdm import tqdm
+import numpy as np
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
 
 import matplotlib.pyplot as plt
 
@@ -545,14 +551,27 @@ def cal_performance(pred, gold):
 
     if args.problem == 'classification':
         # [batch_size]
-        pred = pred.max(dim=1)[1]
+        pred = pred.max(dim=1)[1].tolist()
 
         # [batch_size]
-        gold = gold.contiguous().view(-1)
+        gold = gold.contiguous().view(-1).tolist()
 
-        accuracy = accuracy_score(gold.cpu().tolist(), pred.cpu().tolist())
-        recall = recall_score(gold.tolist(), pred.tolist(), average='micro')
-        f1 = f1_score(gold.tolist(), pred.tolist(), average='micro')
+        accuracy = accuracy_score(gold, pred)
+
+        def intersection(list1, list2): 
+            # Use of hybrid method 
+            temp1 = set(list1)
+            temp2 = set(list2) 
+            list3 = [value for value in temp1 if value in temp2] 
+            return list3 
+
+        labels = intersection(gold, pred)
+        # print('labels: ', labels)
+        # recall = recall_score(gold, pred, average='weighted')
+        recall = recall_score(gold, pred, average='weighted', labels=labels)
+
+        # f1 = f1_score(gold, pred, average='weighted')
+        f1 = f1_score(gold, pred, average='weighted', labels=labels)
 
         return loss, accuracy, recall, f1
     else:

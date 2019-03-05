@@ -65,8 +65,6 @@ class Transformer(nn.Module):
         elif self.model_type == 'transformer_rnn':
             self.bidirection_num = 2 if config.bidirectional else 1
             self.hidden_size = self.embedding_size // self.bidirection_num
-
-            # rnn
             self.rnn = rnn_factory(
                 rnn_type=config.rnn_type,
                 input_size=self.embedding_size,
@@ -75,8 +73,7 @@ class Transformer(nn.Module):
                 bidirectional=config.bidirectional,
                 dropout=config.dropout
             )
-
-            in_feature_size = self.dense_size = self.hidden_size * self.bidirection_num
+            in_feature_size = self.hidden_size * self.bidirection_num
         elif self.model_type == 'transformer_weight':
             # W_s1
             self.linear_first = torch.nn.Linear(self.embedding_size, config.dense_size)
@@ -86,8 +83,10 @@ class Transformer(nn.Module):
             self.linear_second = torch.nn.Linear(config.dense_size, config.num_heads)
             self.linear_second.bias.data.fill_(0)
             in_feature_size = config.max_len * config.num_heads
+        elif self.model_type == 'transformer_maxpool':
+            in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_maxpool_concat': # and transformer_maxpool_residual
-            self.W2 = nn.Linear(self.embedding_size + self.embedding_size, self.embedding_size)
+            self.W2 = nn.Linear(self.embedding_size * 2, self.embedding_size)
             in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_maxpool_residual':
             #  self.layer_norm = nn.LayerNorm(config.embedding_size)
@@ -95,15 +94,13 @@ class Transformer(nn.Module):
 
         if self.problem == 'classification':
             self.linear_final = nn.Linear(in_feature_size, config.n_classes)
+            # nn.init.xavier_normal_(self.linear_final.weight)
         else:
             self.linear_regression_dense = nn.Linear(in_feature_size, config.regression_dense_size)
             self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
 
-        # nn.init.xavier_normal_(self.linear_final.weight)
 
-    def forward(self,
-                inputs,
-                inputs_pos):
+    def forward(self, inputs, inputs_pos):
         """
         Args:
             inputs: [batch_size, max_len]
@@ -149,39 +146,51 @@ class Transformer(nn.Module):
             # [batch_size, max_len * embedding_size]
             outputs = outputs.view(outputs.size(0), -1)
         elif self.model_type == 'transformer_mean':  # mean, average
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
-            outputs = outputs.mean(dim=1)
-            # outputs = self.linear_dense(outputs)
-            # outputs = F.relu(outputs)
-            # [batch_size, n_classes]
+            outputs = outputs.mean(dim=2)
         elif self.model_type == 'transformer_rnn':  # with or without position embedding
+            # [max_len, batch_size, hidden_size]
             outputs, _ = self.rnn(outputs.transpose(0, 1))
             outputs = outputs[-1]
         elif self.model_type == 'transformer_weight':
             # [batch_size, max_len, dense_size]
-            x = F.tanh(self.linear_first(outputs))
+            outputs = F.tanh(self.linear_first(outputs))
             # [batch_size, max_len, num_heads]
-            x = self.linear_second(outputs)
+            outputs = self.linear_second(outputs)
             # [batch_size, max_len * num_heads]
             outputs = x.view(x.size(0), -1)
+        elif self.model_type == 'transformer_maxpool':
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
         elif self.model_type == 'transformer_maxpool_concat':
-            outputs = torch.cat((outputs, residual), dim=2).permute(1, 0, 2)
+            # [batch_size, max_len, embedding_size * 2]
+            outputs = torch.cat((outputs, residual), dim=2)
+            # [batch_size, max_len, embedding_size]
             outputs = self.W2(outputs)
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
         elif self.model_type == 'transformer_maxpool_residual':
+            # [batch_size, max_len, embedding_size]
             outputs = outputs + residual
             #  outputs = self.layer_norm(outputs + residual)
+
+            # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
 
         if self.problem == 'classification':
+            # [batch_size, n_classes]
             outputs = self.linear_final(outputs)
         else:
             outputs = self.linear_regression_dense(outputs)
+            # [batch_size, 1]
             outputs = self.linear_regression_final(outputs)
 
         # [batch_size, vocab_size]
