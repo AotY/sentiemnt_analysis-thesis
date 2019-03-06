@@ -19,19 +19,19 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type self_attention \
+    --model_type transformer_maxpool \
     --n_classes 3 \
     --rnn_type LSTM \
-    --embedding_size 256 \
-    --hidden_size 256 \
+    --embedding_size 100 \
+    --hidden_size 100 \
     --num_layers 2 \
-    --t_num_layers 1 \
-    --transformer_size 256 \
-    --k_size 64 \
-    --v_size 64 \
-    --inner_hidden_size 512 \
+    --t_num_layers 5 \
+    --transformer_size 100 \
+    --k_size 32 \
+    --v_size 32 \
+    --inner_hidden_size 256 \
     --dense_size 128 \
-    --regression_dense_size 128 \
+    --regression_dense_size 256 \
     --num_heads 6 \
     --bidirectional \
     --in_channels 1 \
@@ -39,11 +39,11 @@ python train.py \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.4 \
+    --dropout 0.8 \
     --lr 0.001 \
     --min_len 1 \
     --max_len 55 \
-    --batch_size 64 \
+    --batch_size 128 \
     --valid_split 0.2 \
     --test_split 2 \
     --epochs 30 \
@@ -58,7 +58,7 @@ python train.py \
     --use_pos \
     --use_penalization \
     --penalization_coeff 1.0 \
-    # --max_grad_norm 5.0 \
+    --max_grad_norm 5.0 \
     # --n_warmup_steps 4000 \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \

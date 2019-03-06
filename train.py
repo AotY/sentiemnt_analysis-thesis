@@ -21,7 +21,7 @@ from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
-#  from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report
 
 import matplotlib.pyplot as plt
 
@@ -70,7 +70,7 @@ parser.add_argument('--kernel_heights', nargs='+', type=int, help='')
 parser.add_argument('--stride', type=int)
 parser.add_argument('--padding', type=int)
 parser.add_argument('--dropout', type=float)
-parser.add_argument('--max_grad_norm', type=float, default=5.0)
+parser.add_argument('--max_grad_norm', type=float, default=0.0)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--min_len', type=int, default=5)
 parser.add_argument('--max_len', type=int, default=60)
@@ -382,8 +382,7 @@ def train(epoch):
                 #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
                 #  + C * penal/train_loader.batch_size
             else:
-                loss, accuracy, recall, f1 = cal_performance(
-                    outputs.double(), labels)
+                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
 
         else:
             loss = cal_performance(outputs.double(), labels.double())
@@ -600,11 +599,16 @@ def cal_performance(pred, gold):
 
         labels = intersection(gold, pred)
         # print('labels: ', labels)
+        print(classification_report(gold, pred))
+        # recall = recall_score(gold, pred, average='micro')
+        recall = recall_score(gold, pred, average='macro')
         # recall = recall_score(gold, pred, average='weighted')
-        recall = recall_score(gold, pred, average='weighted', labels=labels)
+        # recall = recall_score(gold, pred, average='weighted', labels=labels)
 
+        # f1 = f1_score(gold, pred, average='micro')
+        f1 = f1_score(gold, pred, average='macro')
         # f1 = f1_score(gold, pred, average='weighted')
-        f1 = f1_score(gold, pred, average='weighted', labels=labels)
+        # f1 = f1_score(gold, pred, average='weighted', labels=labels)
 
         return loss, accuracy, recall, f1
     else:
