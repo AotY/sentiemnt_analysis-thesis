@@ -12,10 +12,11 @@ import argparse
 # warnings.filterwarnings('ignore')  # "error", "ignore", "always", "default", "module" or "once"
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from tqdm import tqdm
-import numpy as np
+#  import numpy as np
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
@@ -24,7 +25,7 @@ from sklearn.metrics import f1_score
 
 import matplotlib.pyplot as plt
 
-from modules.optim import ScheduledOptimizer
+#  from modules.optim import ScheduledOptimizer
 from modules.early_stopping import EarlyStopping
 
 from sa_model import SAModel
@@ -69,7 +70,7 @@ parser.add_argument('--kernel_heights', nargs='+', type=int, help='')
 parser.add_argument('--stride', type=int)
 parser.add_argument('--padding', type=int)
 parser.add_argument('--dropout', type=float)
-# parser.add_argument('--max_grad_norm', type=float, default=5.0)
+parser.add_argument('--max_grad_norm', type=float, default=5.0)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--min_len', type=int, default=5)
 parser.add_argument('--max_len', type=int, default=60)
@@ -182,8 +183,10 @@ def train_epochs():
     log_valid_file = None
 
     if args.log:
-        log_train_file = os.path.join(args.log, 'train.%s.%s.log' % (args.problem, args.model_type))
-        log_valid_file = os.path.join(args.log, 'valid.%s.%s.log' % (args.problem, args.model_type))
+        log_train_file = os.path.join(
+            args.log, 'train.%s.%s.log' % (args.problem, args.model_type))
+        log_valid_file = os.path.join(
+            args.log, 'valid.%s.%s.log' % (args.problem, args.model_type))
 
         print('[Info] Training performance will be written to file: {} and {}'.format(
             log_train_file, log_valid_file))
@@ -319,6 +322,7 @@ def train_epochs():
             print('Early Stopping.\n')
             sys.exit(0)
 
+
 def train(epoch):
     ''' Epoch operation in training phase'''
     model.train()
@@ -357,25 +361,29 @@ def train(epoch):
         if args.problem == 'classification':
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
-                loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
+                loss, accuracy, recall, f1 = cal_performance(
+                    outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
                 attnsT = attns.transpose(1, 2)
                 # [num_heads, num_heads]
                 identity = torch.eye(attns.size(1), device=device)
                 # [batch_size, num_heads, num_heads]
-                identity = identity.unsqueeze(0).expand(attns.size(0), attns.size(1), attns.size(1))
+                identity = identity.unsqueeze(0).expand(
+                    attns.size(0), attns.size(1), attns.size(1))
                 # print('attns: ', attns.shape)
                 # print('attnsT: ', attnsT.shape)
                 # print('identity: ', identity.shape)
 
-                penalization = model.encoder.l2_matrix_norm(attns @ attnsT - identity)
+                penalization = model.encoder.l2_matrix_norm(
+                    attns @ attnsT - identity)
 
                 loss = loss + args.penalization_coeff * penalization / args.batch_size
                 #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
                 #  + C * penal/train_loader.batch_size
             else:
-                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
+                loss, accuracy, recall, f1 = cal_performance(
+                    outputs.double(), labels)
 
         else:
             loss = cal_performance(outputs.double(), labels.double())
@@ -385,6 +393,12 @@ def train(epoch):
 
         # update parameters
         # optimizer.step_and_update_lr()
+
+        # clip
+        if args.max_grad_norm is not None and args.max_grad_norm != 0:
+            _ = nn.utils.clip_grad_norm_(
+                model.parameters(), args.max_grad_norm)
+
         optimizer.step()
 
         # note keeping
@@ -438,7 +452,8 @@ def eval(epoch):
             )
 
             if args.problem == 'classification':
-                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
+                loss, accuracy, recall, f1 = cal_performance(
+                    outputs.double(), labels)
             else:
                 loss = cal_performance(outputs.double(), labels.double())
 
@@ -618,7 +633,8 @@ def cal_loss(pred, gold, smoothing):
             if args.classes_weight is not None and len(args.classes_weight) != 0:
                 # weight = torch.tensor(args.classes_weight, device=device)
                 #  loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
-                loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='mean')
+                loss = F.cross_entropy(
+                    pred, gold, weight=args.classes_weight, reduction='mean')
             else:
                 #  loss = F.cross_entropy(pred, gold, reduction='sum')
                 loss = F.cross_entropy(pred, gold, reduction='mean')
@@ -661,19 +677,18 @@ if __name__ == '__main__':
             valid_f1 = checkpoint['valid_f1']
 
             print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '
-                'accuracy: {accuracy:3.3f}%, recall: {recall:3.3f}%, f1: {f1:3.3f}%'.format(
-                    epoch=epoch,
-                    loss=valid_loss,
-                    accuracy=100*valid_accuracy,
-                    recall=100*valid_recall,
-                    f1=100*valid_f1))
+                  'accuracy: {accuracy:3.3f}%, recall: {recall:3.3f}%, f1: {f1:3.3f}%'.format(
+                      epoch=epoch,
+                      loss=valid_loss,
+                      accuracy=100*valid_accuracy,
+                      recall=100*valid_recall,
+                      f1=100*valid_f1))
         else:
             print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '.format(
-                    epoch=epoch,
-                    loss=valid_loss))
+                epoch=epoch,
+                loss=valid_loss))
 
         args.log_mode = 'a'
-
 
     args.mode = mode
     args.epochs = epochs

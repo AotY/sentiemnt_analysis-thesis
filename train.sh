@@ -58,6 +58,7 @@ python train.py \
     --use_pos \
     --use_penalization \
     --penalization_coeff 1.0 \
+    # --max_grad_norm 5.0 \
     # --n_warmup_steps 4000 \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \
@@ -67,7 +68,6 @@ python train.py \
     # --classes_weight 0.557 1.0 0.038 \
     #--classes_weight  0.0082 0.00151 0.000053 \
     # --smoothing \
-    #--max_grad_norm 5.0 \
 
 
 /

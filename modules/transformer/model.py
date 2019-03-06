@@ -57,6 +57,8 @@ class Transformer(nn.Module):
             in_feature_size = self.embedding_size * self.max_len
         elif self.model_type == 'transformer_avgpool':
             in_feature_size = self.embedding_size
+        elif self.model_type == 'transformer_avgpool_e':
+            in_feature_size = self.max_len
         elif self.model_type == 'transformer_mean':
             # self.linear_dense = nn.Linear(
                 # self.embedding_size,
@@ -64,6 +66,18 @@ class Transformer(nn.Module):
             # )
             in_feature_size = self.embedding_size
 
+        elif self.model_type == 'transformer_max':
+            in_feature_size = self.embedding_size
+        elif self.model_type == 'transformer_maxpool':
+            in_feature_size = self.embedding_size
+        elif self.model_type == 'transformer_maxpool_e':
+            in_feature_size = self.max_len
+        elif self.model_type == 'transformer_maxpool_concat': # and transformer_maxpool_residual
+            self.W2 = nn.Linear(self.embedding_size * 2, self.embedding_size)
+            in_feature_size = self.embedding_size
+        elif self.model_type == 'transformer_maxpool_residual':
+            #  self.layer_norm = nn.LayerNorm(config.embedding_size)
+            in_feature_size = self.embedding_size
         elif self.model_type == 'transformer_rnn':
             self.bidirection_num = 2 if config.bidirectional else 1
             self.hidden_size = self.embedding_size // self.bidirection_num
@@ -85,16 +99,6 @@ class Transformer(nn.Module):
             self.linear_second = torch.nn.Linear(config.dense_size, config.num_heads)
             self.linear_second.bias.data.fill_(0)
             in_feature_size = config.max_len * config.num_heads
-        elif self.model_type == 'transformer_max':
-            in_feature_size = self.embedding_size
-        elif self.model_type == 'transformer_maxpool':
-            in_feature_size = self.embedding_size
-        elif self.model_type == 'transformer_maxpool_concat': # and transformer_maxpool_residual
-            self.W2 = nn.Linear(self.embedding_size * 2, self.embedding_size)
-            in_feature_size = self.embedding_size
-        elif self.model_type == 'transformer_maxpool_residual':
-            #  self.layer_norm = nn.LayerNorm(config.embedding_size)
-            in_feature_size = self.embedding_size
 
         if self.problem == 'classification':
             self.linear_final = nn.Linear(in_feature_size, config.n_classes)
@@ -123,11 +127,12 @@ class Transformer(nn.Module):
         # [batch_size, max_len, embedding_size]
         embedded = self.embedding(inputs)
 
-        embedded = self.dropout(embedded)
-
         if self.use_pos:
             pos_embedded = self.pos_embedding(inputs_pos).to(inputs.device)
             embedded = embedded + pos_embedded
+
+        # dropout
+        embedded = self.dropout(embedded)
 
         if self.model_type.count('residual') != -1:
             residual = embedded
@@ -142,9 +147,6 @@ class Transformer(nn.Module):
 
             slf_attn_list.append(slf_attn)
 
-        # [batch_size, max_len, embedding_size] list
-        #  outputs, attns = self.encoder(inputs, inputs_pos, return_attns=True)
-
         # to [batch_size, n_classes]
         if self.model_type == 'transformer':
             # [batch_size, max_len * embedding_size]
@@ -154,22 +156,14 @@ class Transformer(nn.Module):
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = F.avg_pool1d(outputs, outputs.size(2)).squeeze(2)
+        elif self.model_type == 'transformer_avgpool_e':
+            # [batch_size, embedding_size]
+            outputs = F.avg_pool1d(outputs, outputs.size(2)).squeeze(2)
         elif self.model_type == 'transformer_mean':  # mean, average
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = outputs.mean(dim=2)
-        elif self.model_type == 'transformer_rnn':  # with or without position embedding
-            # [max_len, batch_size, hidden_size]
-            outputs, _ = self.rnn(outputs.transpose(0, 1))
-            outputs = outputs[-1]
-        elif self.model_type == 'transformer_weight':
-            # [batch_size, max_len, dense_size]
-            outputs = F.tanh(self.linear_first(outputs))
-            # [batch_size, max_len, num_heads]
-            outputs = self.linear_second(outputs)
-            # [batch_size, max_len * num_heads]
-            outputs = x.view(x.size(0), -1)
         elif self.model_type == 'transformer_max':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
@@ -178,6 +172,9 @@ class Transformer(nn.Module):
         elif self.model_type == 'transformer_maxpool':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
+            # [batch_size, embedding_size]
+            outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
+        elif self.model_type == 'transformer_maxpool_e':
             # [batch_size, embedding_size]
             outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
         elif self.model_type == 'transformer_maxpool_concat':
@@ -198,6 +195,18 @@ class Transformer(nn.Module):
             outputs = outputs.permute(0, 2, 1)
             # [batch_size, embedding_size]
             outputs = F.max_pool1d(outputs, outputs.size(2)).squeeze(2)
+        elif self.model_type == 'transformer_rnn':  # with or without position embedding
+            # [max_len, batch_size, hidden_size]
+            outputs, _ = self.rnn(outputs.transpose(0, 1))
+            outputs = outputs[-1]
+        elif self.model_type == 'transformer_weight':
+            # [batch_size, max_len, dense_size]
+            outputs = F.tanh(self.linear_first(outputs))
+            # [batch_size, max_len, num_heads]
+            outputs = self.linear_second(outputs)
+            # [batch_size, max_len * num_heads]
+            outputs = x.view(x.size(0), -1)
+
         if self.problem == 'classification':
             # [batch_size, n_classes]
             outputs = self.linear_final(outputs)
