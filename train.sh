@@ -19,7 +19,7 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type cnn \
+    --model_type self_attention \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 256 \
@@ -39,7 +39,7 @@ python train.py \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.1 \
+    --dropout 0.4 \
     --lr 0.001 \
     --min_len 1 \
     --max_len 55 \
@@ -56,9 +56,9 @@ python train.py \
     --save_model models/ \
     --mode train \
     --use_pos \
+    --use_penalization \
+    --penalization_coeff 1.0 \
     # --n_warmup_steps 4000 \
-    #--use_penalization \
-    #--penalization_coeff 1.0 \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \
     #--text 医生医术很高超，还有态度很棒！
