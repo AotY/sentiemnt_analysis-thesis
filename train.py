@@ -4,7 +4,8 @@
 #
 
 import warnings
-warnings.filterwarnings('ignore')  # "error", "ignore", "always", "default", "module" or "once"
+# "error", "ignore", "always", "default", "module" or "once"
+warnings.filterwarnings('ignore')
 
 import os
 import sys
@@ -148,26 +149,29 @@ print(model)
 args.batch_size = args.batch_size // args.gradient_accumulation_steps
 
 #  if args.model_type.find('transformer') != -1:
-    #  optimizer = TransformerOptimizer(
-        #  torch.optim.Adam(
-            #  filter(lambda x: x.requires_grad, model.parameters()),
-            #  args.lr,
-            #  betas=(0.9, 0.98),
-            #  eps=1e-09
-        #  ),
-        #  args.embedding_size,
-        #  args.n_warmup_steps
-    #  )
+#  optimizer = TransformerOptimizer(
+#  torch.optim.Adam(
+#  filter(lambda x: x.requires_grad, model.parameters()),
+#  args.lr,
+#  betas=(0.9, 0.98),
+#  eps=1e-09
+#  ),
+#  args.embedding_size,
+#  args.n_warmup_steps
+#  )
 if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
     print('len(train_data): ', len(train_data))
-    t_total = int(len(train_data) / args.gradient_accumulation_steps) * args.epochs
+    t_total = int(len(train_data) /
+                  args.gradient_accumulation_steps) * args.epochs
     print('t_total: ', t_total)
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'norm.bias', 'norm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': [p for n, p in param_optimizer if not any(
+            nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in param_optimizer if any(
+            nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer = BertAdam(
         optimizer_grouped_parameters,
@@ -238,19 +242,19 @@ def train_epochs():
             #  train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
             train_loss, train_report_df = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
-                      loss=train_loss,
-                      elapse=(time.time()-start)/60))
+                loss=train_loss,
+                elapse=(time.time()-start)/60))
             print(train_report_df, '\n')
 
             #  print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-                  #  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
-                  #  'elapse: {elapse:3.3f}min'.format(
-                      #  loss=train_loss,
-                      #  accuracy=100*train_accuracy,
-                      #  recall=100*train_recall,
-                      #  f1=100*train_f1,
-                      #  elapse=(time.time()-start)/60)
-                  #  )
+            #  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
+            #  'elapse: {elapse:3.3f}min'.format(
+            #  loss=train_loss,
+            #  accuracy=100*train_accuracy,
+            #  recall=100*train_recall,
+            #  f1=100*train_f1,
+            #  elapse=(time.time()-start)/60)
+            #  )
         else:
             train_loss = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, '
@@ -262,19 +266,19 @@ def train_epochs():
         if args.problem == 'classification':
             valid_loss, valid_report_df = eval(epoch)
             print(' (Valid) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
-                      loss=valid_loss,
-                      elapse=(time.time()-start)/60))
+                loss=valid_loss,
+                elapse=(time.time()-start)/60))
             print(valid_report_df, '\n')
 
             #  valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
             #  print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-                  #  'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
-                      #  loss=valid_loss,
-                      #  accuracy=100*valid_accuracy,
-                      #  recall=100*valid_recall,
-                      #  f1=100*valid_f1,
-                      #  elapse=(time.time()-start)/60)
-                  #  )
+            #  'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
+            #  loss=valid_loss,
+            #  accuracy=100*valid_accuracy,
+            #  recall=100*valid_recall,
+            #  f1=100*valid_f1,
+            #  elapse=(time.time()-start)/60)
+            #  )
             #  valid_accuracies += [valid_accuracy]
             valid_accuracy = valid_report_df['f1-score'][-1]
             valid_accuracies.append(valid_report_df['f1-score'][-1])
@@ -352,7 +356,6 @@ def train_epochs():
                     log_vf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
                         loss=valid_loss,))
-        """
 
         if is_stop:
             print('Early Stopping.\n')
@@ -440,7 +443,7 @@ def train(epoch):
                 total_report_df = report_df
             else:
                 total_report_df = total_report_df.add(report_df)
-    
+
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
         """
@@ -629,6 +632,7 @@ def cal_performance(pred, gold):
             return list3
 
         labels = intersection(gold, pred)
+
         """
         # print('labels: ', labels)
         # recall = recall_score(gold, pred, average='micro')
@@ -641,6 +645,7 @@ def cal_performance(pred, gold):
         # f1 = f1_score(gold, pred, average='weighted')
         # f1 = f1_score(gold, pred, average='weighted', labels=labels)
         """
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             report_dict = classification_report(gold, pred, output_dict=True)
