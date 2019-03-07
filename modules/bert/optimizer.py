@@ -62,19 +62,26 @@ class BertAdam(Optimizer):
                  max_grad_norm=1.0):
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
+
         if schedule not in SCHEDULES:
             raise ValueError("Invalid schedule parameter: {}".format(schedule))
+
         if not 0.0 <= warmup < 1.0 and not warmup == -1:
-            raise ValueError("Invalid warmup: {} - should be in [0.0, 1.0[ or -1".format(warmup))
+            raise ValueError("Invalid warmup: {} - should be in [0.0, 1.0] or -1".format(warmup))
+
         if not 0.0 <= b1 < 1.0:
-            raise ValueError("Invalid b1 parameter: {} - should be in [0.0, 1.0[".format(b1))
+            raise ValueError("Invalid b1 parameter: {} - should be in [0.0, 1.]".format(b1))
+
         if not 0.0 <= b2 < 1.0:
-            raise ValueError("Invalid b2 parameter: {} - should be in [0.0, 1.0[".format(b2))
+            raise ValueError("Invalid b2 parameter: {} - should be in [0.0, 1.]".format(b2))
+
         if not e >= 0.0:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(e))
+
         defaults = dict(lr=lr, schedule=schedule, warmup=warmup, t_total=t_total,
                         b1=b1, b2=b2, e=e, weight_decay=weight_decay,
                         max_grad_norm=max_grad_norm)
+
         super(BertAdam, self).__init__(params, defaults)
 
     def get_lr(self):
@@ -85,8 +92,8 @@ class BertAdam(Optimizer):
                 if len(state) == 0:
                     return [0]
                 if group['t_total'] != -1:
-                    schedule_fct = SCHEDULES[group['schedule']]
-                    lr_scheduled = group['lr'] * schedule_fct(state['step']/group['t_total'], group['warmup'])
+                    schedule_fun = SCHEDULES[group['schedule']]
+                    lr_scheduled = group['lr'] * schedule_fun(state['step']/group['t_total'], group['warmup'])
                 else:
                     lr_scheduled = group['lr']
                 lr.append(lr_scheduled)
@@ -95,7 +102,7 @@ class BertAdam(Optimizer):
     def step(self, closure=None):
         """Performs a single optimization step.
         Arguments:
-            closure (callable, optional): A closure that reevaluates the model
+            closure (callable, optional): A closure that re evaluates the model
                 and returns the loss.
         """
         loss = None
@@ -108,10 +115,13 @@ class BertAdam(Optimizer):
             for p in group['params']:
                 if p.grad is None:
                     continue
+
                 grad = p.grad.data
+
                 if grad.is_sparse:
                     raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
 
+                # a dict
                 state = self.state[p]
 
                 # State initialization
@@ -146,9 +156,9 @@ class BertAdam(Optimizer):
                     update += group['weight_decay'] * p.data
 
                 if group['t_total'] != -1:
-                    schedule_fct = SCHEDULES[group['schedule']]
-                    progress = state['step']/group['t_total']
-                    lr_scheduled = group['lr'] * schedule_fct(progress, group['warmup'])
+                    schedule_fun = SCHEDULES[group['schedule']]
+                    progress = state['step'] / group['t_total']
+                    lr_scheduled = group['lr'] * schedule_fun(progress, group['warmup'])
                     # warning for exceeding t_total (only active with warmup_linear
                     if group['schedule'] == "warmup_linear" and progress > 1. and not warned_for_t_total:
                         logger.warning(
@@ -160,6 +170,7 @@ class BertAdam(Optimizer):
                     lr_scheduled = group['lr']
 
                 update_with_lr = lr_scheduled * update
+
                 p.data.add_(-update_with_lr)
 
                 state['step'] += 1

@@ -49,6 +49,7 @@ from visualization.transformer import seaborn_draw
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--data_dir', type=str, help='')
+parser.add_argument('--label_max_ratio', type=float, default=0.8)
 parser.add_argument('--visualization_dir', type=str, help='')
 parser.add_argument('--vocab_path', type=str, help='')
 parser.add_argument('--vocab_size', type=int, help='')
@@ -626,6 +627,7 @@ def cal_performance(pred, gold):
 
         accuracy = accuracy_score(gold, pred)
 
+        """
         def intersection(list1, list2):
             # Use of hybrid method
             temp1 = set(list1)
@@ -634,8 +636,6 @@ def cal_performance(pred, gold):
             return list3
 
         labels = intersection(gold, pred)
-
-        """
         # print('labels: ', labels)
         # recall = recall_score(gold, pred, average='micro')
         recall = recall_score(gold, pred, average='macro')
@@ -655,6 +655,7 @@ def cal_performance(pred, gold):
         # print(report_dict)
         report_df = pd.DataFrame(report_dict)
         report_df = report_df.transpose()
+        #  if len(report_df.index) < (args.n_classes + 3):
         report_df = report_df.fillna(0)
 
         #  return loss, accuracy, recall, f1

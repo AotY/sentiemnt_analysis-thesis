@@ -80,7 +80,7 @@ def cleaning_stats():
                     if len(text) < args.min_len or len(text) > args.max_len:
                         continue
 
-                    line_str = "{}_{}_{}_{}_{}".format(disease, doctor, date, score, text)
+                    line_str = "{}_{}_{}_{}".format(disease, doctor, score, text)
                     if line_str in line_set:
                         continue
                     line_set.add(line_str)

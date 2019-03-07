@@ -19,6 +19,7 @@ python -W ignore train.py \
     --data_path data/label.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
+    --max_label_ratio 0.8 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \

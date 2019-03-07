@@ -18,7 +18,7 @@ from modules.utils import rnn_factory, rnn_init
 class RNNEncoder(nn.Module):
     def __init__(self,
                  config,
-                 embedding):
+                 embedding=None):
         super(RNNEncoder, self).__init__()
 
         self.problem = config.problem
@@ -27,8 +27,11 @@ class RNNEncoder(nn.Module):
         self.rnn_type = config.rnn_type
 
         # embedding
-        self.embedding = embedding
-        self.embedding_size = embedding.embedding_dim
+        if embedding is not None:
+            self.embedding = embedding
+            self.embedding_size = embedding.embedding_dim
+        else:
+            self.from_bert = True
 
         self.bidirection_num = 2 if config.bidirectional else 1
         self.hidden_size = config.hidden_size // self.bidirection_num
@@ -41,7 +44,7 @@ class RNNEncoder(nn.Module):
         # rnn
         self.rnn = rnn_factory(
             rnn_type=config.rnn_type,
-            input_size=self.embedding_size,
+            input_size=config.embedding_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             bidirectional=config.bidirectional,
@@ -50,14 +53,15 @@ class RNNEncoder(nn.Module):
 
         rnn_init(config.rnn_type, self.rnn)
 
-        if self.problem == 'classification':
-            self.linear_final = nn.Linear(
-                self.hidden_size * self.bidirection_num, self.n_classes)
-        else:
-            # self.linear_regression_dense = nn.Linear(
-                # self.hidden_size * self.bidirection_num, config.regression_dense_size)
-            # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
-            self.linear_regression_final = nn.Linear(self.hidden_size * self.bidirection_num, 1)
+        if not self.from_bert:
+            if self.problem == 'classification':
+                self.linear_final = nn.Linear(
+                    self.hidden_size * self.bidirection_num, self.n_classes)
+            else:
+                # self.linear_regression_dense = nn.Linear(
+                    # self.hidden_size * self.bidirection_num, config.regression_dense_size)
+                # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
+                self.linear_regression_final = nn.Linear(self.hidden_size * self.bidirection_num, 1)
 
     def forward(self, inputs, lengths=None, hidden_state=None):
         '''
@@ -67,12 +71,15 @@ class RNNEncoder(nn.Module):
         :return
             outputs: [batch_size, n_classes]
         '''
-
         # embedded
-        embedded = self.embedding(inputs)
-        embedded = self.dropout(embedded)
+        if not self.from_bert:
+            embedded = self.embedding(inputs)
+            embedded = self.dropout(embedded)
+        else:
+            embedded = inputs
 
-        # print('embedded shape: ', embedded.shape)
+        # embedded: [max_len, batch_size, embedding_size]
+
         if lengths is not None:
             embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 
@@ -86,7 +93,8 @@ class RNNEncoder(nn.Module):
 
         # print('outputs shape: ', outputs.shape)
 
-        if self.model_type == 'rnn_attention':
+        #  if self.model_type == 'rnn_attention':
+        if self.model_type.find('attention') != -1:
             # [batch_size, max_len, hidden_size]
             outputs = outputs.permute(1, 0, 2)
             final_state = hidden_state
@@ -100,14 +108,17 @@ class RNNEncoder(nn.Module):
             outputs = outputs[-1]
             attns = None
 
-        if self.problem == 'classification':
-            # last step output [batch_size, hidden_state]
-            outputs = self.linear_final(outputs)
-        else:
-            # outputs = self.linear_regression_dense(outputs)
-            outputs = self.linear_regression_final(outputs)
+        if not self.from_bert:
+            if self.problem == 'classification':
+                # last step output [batch_size, hidden_state]
+                outputs = self.linear_final(outputs)
+            else:
+                # outputs = self.linear_regression_dense(outputs)
+                outputs = self.linear_regression_final(outputs)
 
-        return outputs, attns
+            return outputs, attns
+        else:
+            return outputs, attns
 
     def attention_net(self, lstm_outputs, final_state):
         """
