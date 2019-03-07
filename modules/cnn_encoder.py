@@ -14,7 +14,7 @@ import torch.nn.functional as F
 class CNNEncoder(nn.Module):
     def __init__(self,
                  config,
-                 embedding):
+                 embedding=None):
         """
             Arguments
             ---------
@@ -34,8 +34,11 @@ class CNNEncoder(nn.Module):
         self.problem = config.problem
 
         # embedding
-        self.embedding = embedding
-        self.embedding_size = embedding.embedding_dim
+        if embedding is not None:
+            self.embedding = embedding
+            self.embedding_size = embedding.embedding_dim
+        else:
+            self.from_bert = True
 
         self.in_channels = config.in_channels
         self.out_channels = config.out_channels
@@ -67,14 +70,14 @@ class CNNEncoder(nn.Module):
 
         self.dropout = nn.Dropout(config.dropout)
 
-        if self.problem == 'classification':
-            self.linear_final = nn.Linear(
-                len(self.kernel_heights) * self.out_channels, config.n_classes)
-        else:
-            # self.linear_regression_dense = nn.Linear(
-                # len(self.kernel_heights) * self.out_channels, config.regression_dense_size)
-            # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
-            self.linear_regression_final = nn.Linear(len(self.kernel_heights) * self.out_channels, 1)
+        if not self.from_bert:
+            if self.problem == 'classification':
+                self.linear_final = nn.Linear(len(self.kernel_heights) * self.out_channels, config.n_classes)
+            else:
+                # self.linear_regression_dense = nn.Linear(
+                    # len(self.kernel_heights) * self.out_channels, config.regression_dense_size)
+                # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
+                self.linear_regression_final = nn.Linear(len(self.kernel_heights) * self.out_channels, 1)
 
 
     def conv_block(self, inputs, conv_layer):
@@ -94,7 +97,7 @@ class CNNEncoder(nn.Module):
 
         return max_out
 
-    def forward(self, inputs, batch_size=None):
+    def forward(self, inputs):
         """
         The idea of the Convolutional Neural Netwok for Text Classification is very simple.
         We perform convolution operation on the embedding matrix.
@@ -116,9 +119,12 @@ class CNNEncoder(nn.Module):
 
         """
 
-        # [batch_size, max_len, embedding_size]
-        embedded = self.embedding(inputs)
-        #  embedded = self.dropout(embedded)
+        if not self.from_bert:
+            # [batch_size, max_len, embedding_size]
+            embedded = self.embedding(inputs)
+            #  embedded = self.dropout(embedded)
+        else:
+            embedded = inputs
 
         # [batch_size, 1, max_len, embedding_size]
         embedded = embedded.unsqueeze(1)
@@ -135,11 +141,12 @@ class CNNEncoder(nn.Module):
 
         outputs = self.dropout(outputs)
 
-        if self.problem == 'classification':
-            # [batch_size, num_kernels * out_channels]
-            outputs = self.linear_final(outputs)
-        else:
-            # outputs = self.linear_regression_dense(outputs)
-            outputs = self.linear_regression_final(outputs)
+        if not self.from_bert:
+            if self.problem == 'classification':
+                # [batch_size, num_kernels * out_channels]
+                outputs = self.linear_final(outputs)
+            else:
+                # outputs = self.linear_regression_dense(outputs)
+                outputs = self.linear_regression_final(outputs)
 
         return outputs, None

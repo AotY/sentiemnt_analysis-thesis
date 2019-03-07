@@ -70,7 +70,6 @@ class BERT(nn.Module):
         # running over multiple transformer blocks
         attns_list = list()
         for transformer in self.transformer_blocks:
-            # []
             outputs, attns = transformer.forward(outputs, mask)
             attns_list.append(attns)
 

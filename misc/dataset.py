@@ -21,6 +21,7 @@ def load_data(config, vocab):
     datas_pkl_path = os.path.join(config.data_dir, 'datas.pkl')
     if not os.path.exists(datas_pkl_path):
         datas = list()
+        label_dates = {}
         with open(config.data_path, 'r') as f:
             for line in tqdm(f):
                 line = line.rstrip()
@@ -38,7 +39,24 @@ def load_data(config, vocab):
                 if config.problem == 'classification':
                     label -= 1
 
-                datas.append((ids, label))
+                if label_dates.get(label) is None:
+                    label_dates[label] = list()
+
+                label_dates[label].append((ids, label))
+
+        total_sample = 0
+        for label in label_dates.keys():
+            np.random.shuffle(label_dates[label])
+            total_sample += len(label_dates[label])
+
+        label_max_smaple = int(total_sample * config.label_max_ratio)
+
+        for label in label_dates.keys():
+            if len(label_dates[label]) > label_max_smaple:
+                datas.extend(label_dates[label][:label_max_smaple])
+            else:
+                datas.extend(label_dates[label])
+
         np.random.shuffle(datas)
         pickle.dump(datas, open(datas_pkl_path, 'wb'))
         print('datas: ', len(datas))
@@ -79,7 +97,7 @@ def build_dataloader(config, datas):
     valid_data = data.DataLoader(
         valid_dataset,
         batch_size=config.batch_size,
-        shuffle=False,
+        shuffle=True,
         num_workers=2,
         collate_fn=collate_fn,
 
