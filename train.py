@@ -343,12 +343,12 @@ def train_epochs():
                     log_tf.write('{epoch}, {loss: 8.5f}\n'.format(
                         epoch=epoch,
                         loss=train_loss))
-                    log_tf.rite('%s\n' % train_report_df.to_string())
+                    log_tf.write('%s\n' % train_report_df.to_string())
 
                     log_vf.write('{epoch}, {loss: 8.5f},\n'.format(
                         epoch=epoch,
                         loss=valid_loss))
-                    log_tf.rite('%s\n' % valid_report_df.to_string())
+                    log_tf.write('%s\n' % valid_report_df.to_string())
                 else:
                     log_tf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
@@ -443,6 +443,7 @@ def train(epoch):
                 total_report_df = report_df
             else:
                 total_report_df = total_report_df.add(report_df)
+                total_report_df.fillna(0)
 
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
@@ -503,6 +504,7 @@ def eval(epoch):
                     total_report_df = report_df
                 else:
                     total_report_df = total_report_df.add(report_df)
+                    total_report_df.fillna(0)
 
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
@@ -683,8 +685,9 @@ def cal_loss(pred, gold, smoothing):
             if args.classes_weight is not None and len(args.classes_weight) != 0:
                 # weight = torch.tensor(args.classes_weight, device=device)
                 #  loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
-                loss = F.cross_entropy(
-                    pred, gold, weight=args.classes_weight, reduction='mean')
+                # print('pred: ', pred.shape)
+                # print('gold: ', gold.shape)
+                loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='mean')
             else:
                 #  loss = F.cross_entropy(pred, gold, reduction='sum')
                 loss = F.cross_entropy(pred, gold, reduction='mean')

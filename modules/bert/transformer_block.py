@@ -30,6 +30,7 @@ class TransformerBlock(nn.Module):
 
         super().__init__()
         self.attention = MultiHeadedAttention(num_heads=num_heads, d_model=d_model)
+        # self.attention = MultiHeadedAttention(num_heads=num_heads, d_model=d_model, dropout=dropout)
         self.feed_forward = PositionwiseFeedForward(d_model=d_model, d_ff=feed_forward_hidden, dropout=dropout)
 
         self.input_sublayer = SublayerConnection(size=d_model, dropout=dropout)

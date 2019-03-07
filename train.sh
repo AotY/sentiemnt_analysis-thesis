@@ -22,7 +22,7 @@ python -W ignore train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_max \
+    --model_type bert_avg \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 100 \
