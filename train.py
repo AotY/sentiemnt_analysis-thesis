@@ -145,18 +145,18 @@ print(model)
 # optimizer
 args.batch_size = args.batch_size // args.gradient_accumulation_steps
 
-if args.model_type.find('transformer') != -1:
-    optimizer = TransformerOptimizer(
-        torch.optim.Adam(
-            filter(lambda x: x.requires_grad, model.parameters()),
-            args.lr,
-            betas=(0.9, 0.98),
-            eps=1e-09
-        ),
-        args.embedding_size,
-        args.n_warmup_steps
-    )
-elif args.model_type.find('bert') != -1:
+#  if args.model_type.find('transformer') != -1:
+    #  optimizer = TransformerOptimizer(
+        #  torch.optim.Adam(
+            #  filter(lambda x: x.requires_grad, model.parameters()),
+            #  args.lr,
+            #  betas=(0.9, 0.98),
+            #  eps=1e-09
+        #  ),
+        #  args.embedding_size,
+        #  args.n_warmup_steps
+    #  )
+if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
     t_total = int(len(train_data) / args.batch_size /
                   args.gradient_accumulation_steps) * args.epochs
