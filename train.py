@@ -17,6 +17,7 @@ import torch.nn.functional as F
 
 from tqdm import tqdm
 #  import numpy as np
+import pandas as pd
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
@@ -26,6 +27,8 @@ from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 
 #  from modules.optim import ScheduledOptimizer
+from modules.transformer.optimizer import TransformerOptimizer
+from modules.bert.optimizer import BertAdam
 from modules.early_stopping import EarlyStopping
 
 from sa_model import SAModel
@@ -53,7 +56,7 @@ parser.add_argument('--bidirectional', action='store_true')
 parser.add_argument('--use_pos', action='store_true')
 parser.add_argument('--sampler', action='store_true')
 parser.add_argument('--num_layers', type=int)
-parser.add_argument('--transformer_size', type=int)
+#  parser.add_argument('--transformer_size', type=int)
 parser.add_argument('--inner_hidden_size', type=int)
 parser.add_argument('--dense_size', type=int)
 parser.add_argument('--regression_dense_size', type=int)
@@ -93,6 +96,10 @@ parser.add_argument('--penalization_coeff', type=float, default=0.00)
 parser.add_argument('--log', type=str, help='save log.')
 parser.add_argument('--log_mode', type=str, default='w', help='w or a')
 parser.add_argument('--seed', type=str, help='random seed')
+parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
+                    help="Number of updates steps to accumulate before performing a backward/update pass.")
+parser.add_argument("--warmup_proportion", default=0.1, type=float,
+                    help="Proportion of training to perform linear learning rate warmup for. E.g., 0.1 = 10%% of training.")
 parser.add_argument('--model_type', type=str, help='')
 parser.add_argument('--problem', type=str, help='classification or regression')
 parser.add_argument('--mode', type=str, help='train, eval, test')
@@ -136,36 +143,50 @@ model = SAModel(
 print(model)
 
 # optimizer
+args.batch_size = args.batch_size // args.gradient_accumulation_steps
 
-"""
-optimizer = ScheduledOptimizer(
-    torch.optim.Adam(
+if args.model_type.find('transformer') != -1:
+    optimizer = TransformerOptimizer(
+        torch.optim.Adam(
+            filter(lambda x: x.requires_grad, model.parameters()),
+            args.lr,
+            betas=(0.9, 0.98),
+            eps=1e-09
+        ),
+        args.embedding_size,
+        args.n_warmup_steps
+    )
+elif args.model_type.find('bert') != -1:
+    # TODO
+    t_total = int(len(train_data) / args.batch_size /
+                  args.gradient_accumulation_steps) * args.epochs
+    optimizer = BertAdam(
+        filter(lambda x: x.requires_grad, model.parameters()),
+        lr=args.lr,
+        warmup=args.warmup_proportion,
+        t_total=t_total,
+        schedule='warmup_linear',
+        max_grad_norm=args.max_grad_norm
+    )
+else:
+    #  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
+    optimizer = torch.optim.Adam(
         filter(lambda x: x.requires_grad, model.parameters()),
         args.lr,
         betas=(0.9, 0.98),
         eps=1e-09
-    ),
-    args.embedding_size,
-    args.n_warmup_steps
-)
+    )
 
-"""
-#  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
-optimizer = torch.optim.Adam(
-    filter(lambda x: x.requires_grad, model.parameters()),
-    args.lr,
-    betas=(0.9, 0.98),
-    eps=1e-09
-)
-
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer,
-    mode='min',
-    factor=0.3,
-    #  min_lr=1e-08,
-    patience=args.lr_patience,
-    verbose=True
-)
+    """
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.3,
+        #  min_lr=1e-08,
+        patience=args.lr_patience,
+        verbose=True
+    )
+    """
 
 # early stopping
 early_stopping = EarlyStopping(
@@ -201,22 +222,30 @@ def train_epochs():
                     log_tf.write('epoch, loss, \n')
                     log_vf.write('epoch, loss, \n')
 
-    valid_accuracies = []
+    valid_accuracies = list()
     for epoch in range(args.start_epoch, args.epochs + 1):
         print('[ Epoch', epoch, ']')
 
         start = time.time()
         if args.problem == 'classification':
-            train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
-            print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-                  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
-                  'elapse: {elapse:3.3f}min'.format(
+            #  train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
+            train_loss, train_report_dict = train(epoch)
+            train_report_df = pd.DataFrame(train_report_dict)
+            train_report_df = train_report_df.transpose()
+            print(' (Training) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                       loss=train_loss,
-                      accuracy=100*train_accuracy,
-                      recall=100*train_recall,
-                      f1=100*train_f1,
-                      elapse=(time.time()-start)/60)
-                  )
+                      elapse=(time.time()-start)/60))
+            print(train_report_df)
+
+            #  print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+                  #  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
+                  #  'elapse: {elapse:3.3f}min'.format(
+                      #  loss=train_loss,
+                      #  accuracy=100*train_accuracy,
+                      #  recall=100*train_recall,
+                      #  f1=100*train_f1,
+                      #  elapse=(time.time()-start)/60)
+                  #  )
         else:
             train_loss = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, '
@@ -227,27 +256,35 @@ def train_epochs():
 
         start = time.time()
         if args.problem == 'classification':
-            valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
-            print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
-                  'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
-                  'elapse: {elapse:3.3f} min'.format(
+            valid_loss, valid_report_dict = eval(epoch)
+            valid_report_df = pd.DataFrame(valid_report_dict)
+            valid_report_df = valid_report_df.transpose()
+            print(' (Valid) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                       loss=valid_loss,
-                      accuracy=100*valid_accuracy,
-                      recall=100*valid_recall,
-                      f1=100*valid_f1,
-                      elapse=(time.time()-start)/60)
-                  )
-            valid_accuracies += [valid_accuracy]
+                      elapse=(time.time()-start)/60))
+            print(valid_report_df)
+
+            #  valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
+            #  print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
+                  #  'recall: {accuracy:3.3f}%, f1: {f1: 3.3f}%, '
+                      #  loss=valid_loss,
+                      #  accuracy=100*valid_accuracy,
+                      #  recall=100*valid_recall,
+                      #  f1=100*valid_f1,
+                      #  elapse=(time.time()-start)/60)
+                  #  )
+            #  valid_accuracies += [valid_accuracy]
+            valid_accuracy = valid_report_df['f1-score'][-1]
+            valid_accuracies.append(valid_report_df['f1-score'][-1])
         else:
             valid_loss = eval(epoch)
             print(' (Validataion) loss: {loss: 8.5f}, '
                   'elapse: {elapse:3.3f}min'.format(
                       loss=valid_loss,
-                      elapse=(time.time()-start)/60)
-                  )
+                      elapse=(time.time()-start)/60))
 
         # update lr
-        scheduler.step(valid_loss)
+        #  scheduler.step(valid_loss)
 
         # is early_stopping
         is_stop = early_stopping.step(valid_loss)
@@ -256,15 +293,16 @@ def train_epochs():
             'model': model.state_dict(),
             'settings': args,
             'epoch': epoch,
-            # 'optimizer': optimizer._optimizer.state_dict(),
+            #  'optimizer': optimizer._optimizer.state_dict(),
             'optimizer': optimizer.state_dict(),
-            'scheduler': scheduler.state_dict(),
+            #  'scheduler': scheduler.state_dict(),
             'valid_loss': valid_loss,
         }
         if args.problem == 'classification':
-            checkpoint['valid_accuracy'] = valid_accuracy
-            checkpoint['valid_recall'] = valid_recall
-            checkpoint['valid_f1'] = valid_f1
+            #  checkpoint['valid_accuracy'] = valid_accuracy
+            #  checkpoint['valid_recall'] = valid_recall
+            #  checkpoint['valid_f1'] = valid_f1
+            checkpoint['report'] = valid_report_df
 
         if args.save_model:
             if args.save_mode == 'all':
@@ -289,9 +327,12 @@ def train_epochs():
                 else:
                     model_name = os.path.join(
                         args.save_model, 'regression.%s.best.pth' % args.model_type)
+
                 if valid_accuracy >= max(valid_accuracies):
                     torch.save(checkpoint, model_name)
                     print('   - [Info] The checkpoint file has been updated.')
+
+        """
 
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
@@ -317,6 +358,7 @@ def train_epochs():
                     log_vf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
                         loss=valid_loss,))
+        """
 
         if is_stop:
             print('Early Stopping.\n')
@@ -328,40 +370,31 @@ def train(epoch):
     model.train()
 
     total_loss = 0
-    times = 0
     if args.problem == 'classification':
         #  total_label = 0
-        total_accuracy = 0
-        total_recall = 0
-        total_f1 = 0
+        #  total_accuracy = 0
+        #  total_recall = 0
+        #  total_f1 = 0
+        total_report_dict = None
 
-    for batch in tqdm(
+    global_step = 0
+    for step, batch in enumerate(tqdm(
             train_data, mininterval=2,
-            desc=' (Training: %d) ' % epoch, leave=False):
-
+            desc=' (Training: %d) ' % epoch, leave=False)):
         # prepare data
+        # [max_len, batch_size]
         inputs, lengths, labels, inputs_pos = map(
             lambda x: x.to(device), batch)
-        # [batch_size, max_len]
-        # print('inputs: ', inputs)
-        # print('legnths: ', lengths)
-        # print('labels: ', labels)
-
-        # forward
-        optimizer.zero_grad()
 
         loss = 0
 
-        outputs, attns = model(
-            inputs,
-            lengths=lengths,
-            inputs_pos=inputs_pos
-        )
+        outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos)
 
         if args.problem == 'classification':
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
-                loss, accuracy, recall, f1 = cal_performance(
+                #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
+                loss, report_dict = cal_performance(
                     outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
@@ -382,57 +415,76 @@ def train(epoch):
                 #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
                 #  + C * penal/train_loader.batch_size
             else:
-                loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
+                loss, report_dict = cal_performance(outputs.double(), labels)
 
         else:
             loss = cal_performance(outputs.double(), labels.double())
 
+        if args.gradient_accumulation_steps > 1:
+            loss = loss / args.gradient_accumulation_steps
+
         # backward
         loss.backward()
 
-        # update parameters
-        # optimizer.step_and_update_lr()
-
-        # clip
-        if args.max_grad_norm is not None and args.max_grad_norm != 0:
-            _ = nn.utils.clip_grad_norm_(
-                model.parameters(), args.max_grad_norm)
-
-        optimizer.step()
-
-        # note keeping
         total_loss += loss.item()
-        times += 1
+
+        if (step + 1) % args.gradient_accumulation_steps == 0:
+            # update parameters
+            optimizer.step()
+            # optimizer.step_and_update_lr()
+
+            optimizer.zero_grad()
+
+            global_step += 1
+            # clip
+            #  if args.max_grad_norm is not None and args.max_grad_norm != 0:
+            #  _ = nn.utils.clip_grad_norm_(
+            #  model.parameters(), args.max_grad_norm)
+
         if args.problem == 'classification':
-            #  total_label += labels.size(0)
+            """
+            total_label += labels.size(0)
             total_accuracy += accuracy
             total_recall += recall
             total_f1 += f1
+            """
+            if total_report_dict is None:
+                total_report_dict = report_dict
+            else:
+                for key1, value1 in report_dict.items():
+                    for key2, value2 in total_report_dict[key1].items():
+                        total_report_dict[key1][key2] += value2
 
+    avg_loss = total_loss / global_step
     if args.problem == 'classification':
+        """
         avg_loss = total_loss / times
-        #  avg_loss = total_loss / total_label
+        avg_loss = total_loss / total_label
         avg_accuracy = total_accuracy / times
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
-        return avg_loss, avg_accuracy, avg_recall, avg_f1
-    else:
-        avg_loss = total_loss / times
-        return avg_loss
+        """
+        avg_report_dict = {}
+        for key1, value1 in total_report_dict.items():
+            avg_report_dict[key1] = {}
+            for key2, value2 in total_report_dict[key1].items():
+                avg_report_dict[key1][key2] = value2 / global_step
+        return avg_loss, avg_report_dict
+    return avg_loss
 
 
 def eval(epoch):
     ''' Epoch operation in evaluation phase '''
     model.eval()
-
     total_loss = 0
     #  total_label = 0
-    times = 0
     if args.problem == 'classification':
-        total_accuracy = 0
-        total_recall = 0
-        total_f1 = 0
+        #  total_accuracy = 0
+        #  total_recall = 0
+        #  total_f1 = 0
+        total_report_dict = None
 
+    global_step = 0
     with torch.no_grad():
         for batch in tqdm(
                 valid_data, mininterval=2,
@@ -445,37 +497,39 @@ def eval(epoch):
             # print('labels: ', labels)
 
             outputs, attns = model(
-                inputs,
-                lengths=lengths,
-                inputs_pos=inputs_pos
-            )
+                inputs, lengths=lengths, inputs_pos=inputs_pos)
 
             if args.problem == 'classification':
-                loss, accuracy, recall, f1 = cal_performance(
-                    outputs.double(), labels)
+                #  loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
+                loss, report_dict = cal_performance(outputs.double(), labels)
             else:
                 loss = cal_performance(outputs.double(), labels.double())
 
-            # note keeping
             total_loss += loss.item()
 
-            times += 1
+            global_step += 1
+
             if args.problem == 'classification':
                 #  total_label += labels.size(0)
-                total_accuracy += accuracy
-                total_recall += recall
-                total_f1 += f1
+                #  total_accuracy += accuracy
+                #  total_recall += recall
+                #  total_f1 += f1
+                if total_report_dict is None:
+                    total_report_dict = report_dict
+                else:
+                    for key1, value1 in report_dict.items():
+                        for key2, value2 in total_report_dict[key1].items():
+                            total_report_dict[key1][key2] += value2
 
+    avg_loss = total_loss / global_step
     if args.problem == 'classification':
-        avg_loss = total_loss / times
-        #  avg_loss = total_loss / total_label
-        avg_accuracy = total_accuracy / times
-        avg_recall = total_recall / times
-        avg_f1 = total_f1 / times
-        return avg_loss, avg_accuracy, avg_recall, avg_f1
-    else:
-        avg_loss = total_loss / times
-        return avg_loss
+        avg_report_dict = {}
+        for key1, value1 in total_report_dict.items():
+            avg_report_dict[key1] = {}
+            for key2, value2 in total_report_dict[key1].items():
+                avg_report_dict[key1][key2] = value2 / global_step
+        return avg_loss, avg_report_dict
+    return avg_loss
 
 
 def test():
@@ -590,6 +644,7 @@ def cal_performance(pred, gold):
 
         accuracy = accuracy_score(gold, pred)
 
+        """
         def intersection(list1, list2):
             # Use of hybrid method
             temp1 = set(list1)
@@ -599,18 +654,20 @@ def cal_performance(pred, gold):
 
         labels = intersection(gold, pred)
         # print('labels: ', labels)
-        print(classification_report(gold, pred))
         # recall = recall_score(gold, pred, average='micro')
         recall = recall_score(gold, pred, average='macro')
         # recall = recall_score(gold, pred, average='weighted')
         # recall = recall_score(gold, pred, average='weighted', labels=labels)
 
         # f1 = f1_score(gold, pred, average='micro')
-        f1 = f1_score(gold, pred, average='macro')
+        #  f1 = f1_score(gold, pred, average='macro')
         # f1 = f1_score(gold, pred, average='weighted')
         # f1 = f1_score(gold, pred, average='weighted', labels=labels)
+        """
+        report_dict = classification_report(gold, pred, output_dict=True)
 
-        return loss, accuracy, recall, f1
+        #  return loss, accuracy, recall, f1
+        return loss, report_dict
     else:
         return loss
 
@@ -665,9 +722,9 @@ if __name__ == '__main__':
         checkpoint = torch.load(args.checkpoint)
 
         model.load_state_dict(checkpoint['model'])
-        # optimizer._optimizer.load_state_dict(checkpoint['optimizer'])
+        #  optimizer._optimizer.load_state_dict(checkpoint['optimizer'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
+        #  scheduler.load_state_dict(checkpoint['scheduler'])
 
         args = checkpoint['settings']
 
@@ -675,22 +732,15 @@ if __name__ == '__main__':
         args.start_epoch = epoch + 1
 
         valid_loss = checkpoint['valid_loss']
+        print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '.format(
+            epoch=epoch,
+            loss=valid_loss))
         if args.problem == 'classification':
-            valid_accuracy = checkpoint['valid_accuracy']
-            valid_recall = checkpoint['valid_recall']
-            valid_f1 = checkpoint['valid_f1']
-
-            print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '
-                  'accuracy: {accuracy:3.3f}%, recall: {recall:3.3f}%, f1: {f1:3.3f}%'.format(
-                      epoch=epoch,
-                      loss=valid_loss,
-                      accuracy=100*valid_accuracy,
-                      recall=100*valid_recall,
-                      f1=100*valid_f1))
-        else:
-            print('  - (checkpoint) epoch: {epoch: d}, loss: {loss: 8.5f}, '.format(
-                epoch=epoch,
-                loss=valid_loss))
+            valid_report_df = checkpoint['report']
+            #  valid_accuracy = checkpoint['valid_accuracy']
+            #  valid_recall = checkpoint['valid_recall']
+            #  valid_f1 = checkpoint['valid_f1']
+            print(valid_report_df)
 
         args.log_mode = 'a'
 

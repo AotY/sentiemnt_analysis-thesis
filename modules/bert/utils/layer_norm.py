@@ -22,7 +22,7 @@ class LayerNorm(nn.Module):
         self.b_2 = nn.Parameter(torch.zeros(features))
         self.eps = eps
 
-	def forward(self, x):
-		mean = x.mean(-1, keepdim=True)
-		std = x.std(-1, keepdim=True)
-		return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
+    def forward(self, x):
+        mean = x.mean(-1, keepdim=True)
+        std = x.std(-1, keepdim=True)
+        return self.a_2 * (x - mean) / (std + self.eps) + self.b_2

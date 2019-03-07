@@ -16,13 +16,13 @@ class MultiHeadedAttention(nn.Module):
     Take in model size and number of heads.
     """
 
-    def __init__(self, h, d_model, dropout=0.1):
+    def __init__(self, num_heads, d_model, dropout=0.1):
         super().__init__()
-        assert d_model % h == 0
+        assert d_model % num_heads == 0
 
         # We assume d_v always equals d_k
-        self.d_k = d_model // h
-        self.h = h
+        self.d_k = d_model // num_heads
+        self.num_heads = num_heads
 
         self.linear_layers = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(3)])
         self.output_linear = nn.Linear(d_model, d_model)
@@ -33,17 +33,19 @@ class MultiHeadedAttention(nn.Module):
     def forward(self, query, key, value, mask=None):
         batch_size = query.size(0)
 
-        # 1) Do all the linear projections in batch from d_model => h x d_k
-        query, key, value = [l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
+        # 1) Do all the linear projections in batch from d_model => num_heads x d_k
+        # [batch_size, num_heads, max_len, d_k]
+        query, key, value = [l(x).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
                              for l, x in zip(self.linear_layers, (query, key, value))]
 
         # 2) Apply attention on all the projected vectors in batch.
         x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
 
         # 3) "Concat" using a view and apply a final linear.
-        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+        # [batch_size, max_len, embedding_size]
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.num_heads * self.d_k)
 
-        return self.output_linear(x)
+        return self.output_linear(x), attn
 
 
 

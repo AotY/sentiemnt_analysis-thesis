@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Transformer
+Transformer Classification Model
 """
 import torch
 import torch.nn as nn
@@ -18,7 +18,7 @@ from modules.transformer.utils import get_non_pad_mask
 from misc.vocab import PAD_ID
 
 
-class Transformer(nn.Module):
+class TransformerCM(nn.Module):
     ''' A sequence to sequence model with attention mechanism. '''
 
     def __init__(self, config, embedding):

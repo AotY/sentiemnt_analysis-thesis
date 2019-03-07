@@ -15,7 +15,8 @@ from modules.rnn_encoder import RNNEncoder
 from modules.cnn_encoder import CNNEncoder
 from modules.rcnn_encoder import RCNNEncoder
 from modules.self_attention.model import StructuredSelfAttention
-from modules.transformer.model import Transformer
+from modules.transformer.model import TransformerCM
+from modules.bert.model import BERTCM
 
 from modules.utils import load_embedding
 
@@ -25,6 +26,7 @@ class SAModel(nn.Module):
     generating responses on both conversation history and external "facts", allowing the model
     to be versatile and applicable in an open-domain setting.
     '''
+
     def __init__(self,
                  config,
                  device='cuda',
@@ -35,37 +37,20 @@ class SAModel(nn.Module):
         self.device = device
         # print('config: {}'.format(config))
 
-        embedding = load_embedding(
-            config,
-            pretrained_embedding
-        )
+        embedding = load_embedding(config, pretrained_embedding)
 
         if config.model_type in ['rnn', 'rnn_attention']:
-            self.encoder = RNNEncoder(
-                config,
-                embedding
-            )
+            self.encoder = RNNEncoder(config, embedding)
         elif config.model_type == 'cnn':
-            self.encoder = CNNEncoder(
-                config,
-                embedding
-            )
+            self.encoder = CNNEncoder(config, embedding)
         elif config.model_type == 'rcnn':
-            self.encoder = RCNNEncoder(
-                config,
-                embedding
-            )
+            self.encoder = RCNNEncoder(config, embedding)
         elif config.model_type == 'self_attention':
-            self.encoder = StructuredSelfAttention(
-                config,
-                embedding
-            )
-        #  elif config.model_type in ['transformer', 'transformer_rnn', 'transformer_weight']:
+            self.encoder = StructuredSelfAttention(config, embedding)
         elif config.model_type.find('transformer') != -1:
-            self.encoder = Transformer(
-                config,
-                embedding
-            )
+            self.encoder = TransformerCM(config, embedding)
+        elif config.model_type.find('bert') != -1:
+            self.encoder = BERTCM(config, embedding)
 
     def forward(self,
                 inputs,
@@ -102,6 +87,13 @@ class SAModel(nn.Module):
                 lengths
             )
         elif self.config.model_type.find('transformer') != -1:
+            # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
+            # print(inputs_pos)
+            outputs, attns = self.encoder(
+                inputs.transpose(0, 1),
+                inputs_pos.transpose(0, 1)
+            )
+        elif self.config.model_type.find('bert') != -1:
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
             outputs, attns = self.encoder(

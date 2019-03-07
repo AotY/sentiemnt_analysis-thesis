@@ -20,25 +20,37 @@ class TransformerBlock(nn.Module):
     Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
     """
 
-    def __init__(self, hidden, attn_heads, feed_forward_hidden, dropout):
+    def __init__(self, d_model, num_heads, feed_forward_hidden, dropout):
         """
-        :param hidden: hidden size of transformer
-        :param attn_heads: head sizes of multi-head attention
+        :param d_model: d_model size of transformer
+        :param num_heads: head sizes of multi-head attention
         :param feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
         :param dropout: dropout rate
         """
 
         super().__init__()
-        self.attention = MultiHeadedAttention(h=attn_heads, d_model=hidden)
-        self.feed_forward = PositionwiseFeedForward(d_model=hidden, d_ff=feed_forward_hidden, dropout=dropout)
+        self.attention = MultiHeadedAttention(num_heads=num_heads, d_model=d_model)
+        self.feed_forward = PositionwiseFeedForward(d_model=d_model, d_ff=feed_forward_hidden, dropout=dropout)
 
-        self.input_sublayer = SublayerConnection(size=hidden, dropout=dropout)
-        self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
+        self.input_sublayer = SublayerConnection(size=d_model, dropout=dropout)
+        self.output_sublayer = SublayerConnection(size=d_model, dropout=dropout)
 
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, mask):
-        x = self.input_sublayer(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+        """
+        Args:
+            x: [batch_size, max_len, d_model]
+            mask: [batch_size, 1, max_len, max_len]
+        Returns:
+            outputs: [batch_size, max_len, d_model]
+            attns: [batch_size, num_heads, max_len, max_len] list
+        """
+        x, attns = self.attention(x, x, x, mask=mask)
+        x = self.input_sublayer(x)
+        #  x, attns = self.input_sublayer(x, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+
         x = self.output_sublayer(x, self.feed_forward)
-        return self.dropout(x)
+        x = self.dropout(x)
+        return x, attns
 

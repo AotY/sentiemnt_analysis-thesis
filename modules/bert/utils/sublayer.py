@@ -23,6 +23,9 @@ class SublayerConnection(nn.Module):
         self.norm = LayerNorm(size)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, sublayer):
-		"Apply residual connection to any sublayer with the same size."
-		return x + self.dropout(sublayer(self.norm(x)))
+    def forward(self, x, sublayer=None):
+        "Apply residual connection to any sublayer with the same size."
+        if sublayer is None:
+            return x + self.dropout(self.norm(x))
+        else:
+            return x + self.dropout(sublayer(self.norm(x)))
