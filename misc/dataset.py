@@ -41,6 +41,7 @@ def load_data(config, vocab):
                 datas.append((ids, label))
         np.random.shuffle(datas)
         pickle.dump(datas, open(datas_pkl_path, 'wb'))
+        print('datas: ', len(datas))
     else:
         datas = pickle.load(open(datas_pkl_path, 'rb'))
 

@@ -3,13 +3,13 @@
 # Copyright © 2018 LeonTao
 #
 
+import warnings
+warnings.filterwarnings('ignore')  # "error", "ignore", "always", "default", "module" or "once"
+
 import os
 import sys
 import time
 import argparse
-
-# import warnings
-# warnings.filterwarnings('ignore')  # "error", "ignore", "always", "default", "module" or "once"
 
 import torch
 import torch.nn as nn
@@ -20,8 +20,10 @@ from tqdm import tqdm
 import pandas as pd
 
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
+# from sklearn.metrics import recall_score
+# from sklearn.metrics import f1_score
+
+
 from sklearn.metrics import classification_report
 
 import matplotlib.pyplot as plt
@@ -158,16 +160,21 @@ args.batch_size = args.batch_size // args.gradient_accumulation_steps
     #  )
 if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
-    t_total = int(len(train_data) / args.batch_size /
-                  args.gradient_accumulation_steps) * args.epochs
+    print('len(train_data): ', len(train_data))
+    t_total = int(len(train_data) / args.gradient_accumulation_steps) * args.epochs
+    print('t_total: ', t_total)
+    param_optimizer = list(model.named_parameters())
+    no_decay = ['bias', 'norm.bias', 'norm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
     optimizer = BertAdam(
-        filter(lambda x: x.requires_grad, model.parameters()),
+        optimizer_grouped_parameters,
         lr=args.lr,
         warmup=args.warmup_proportion,
-        t_total=t_total,
-        schedule='warmup_linear',
-        max_grad_norm=args.max_grad_norm
-    )
+        t_total=t_total)
+
 else:
     #  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
     optimizer = torch.optim.Adam(
@@ -229,13 +236,11 @@ def train_epochs():
         start = time.time()
         if args.problem == 'classification':
             #  train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
-            train_loss, train_report_dict = train(epoch)
-            train_report_df = pd.DataFrame(train_report_dict)
-            train_report_df = train_report_df.transpose()
+            train_loss, train_report_df = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                       loss=train_loss,
                       elapse=(time.time()-start)/60))
-            print(train_report_df)
+            print(train_report_df, '\n')
 
             #  print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
                   #  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
@@ -251,18 +256,15 @@ def train_epochs():
             print(' (Training) loss: {loss: 8.5f}, '
                   'elapse: {elapse:3.3f}min'.format(
                       loss=train_loss,
-                      elapse=(time.time()-start)/60)
-                  )
+                      elapse=(time.time()-start)/60))
 
         start = time.time()
         if args.problem == 'classification':
-            valid_loss, valid_report_dict = eval(epoch)
-            valid_report_df = pd.DataFrame(valid_report_dict)
-            valid_report_df = valid_report_df.transpose()
+            valid_loss, valid_report_df = eval(epoch)
             print(' (Valid) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                       loss=valid_loss,
                       elapse=(time.time()-start)/60))
-            print(valid_report_df)
+            print(valid_report_df, '\n')
 
             #  valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
             #  print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
@@ -331,26 +333,18 @@ def train_epochs():
                 if valid_accuracy >= max(valid_accuracies):
                     torch.save(checkpoint, model_name)
                     print('   - [Info] The checkpoint file has been updated.')
-
-        """
-
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
                 if args.problem == 'classification':
-                    log_tf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall:3.3f}, {f1:3.3f}\n'.format(
+                    log_tf.write('{epoch}, {loss: 8.5f}\n'.format(
                         epoch=epoch,
-                        loss=train_loss,
-                        accuracy=100*train_accuracy,
-                        recall=100*train_recall,
-                        f1=100*train_f1)
-                    )
-                    log_vf.write('{epoch}, {loss: 8.5f}, {accuracy:3.3f}, {recall: 3.3f}, {f1:3.3f}\n'.format(
+                        loss=train_loss))
+                    log_tf.rite('%s\n' % train_report_df.to_string())
+
+                    log_vf.write('{epoch}, {loss: 8.5f},\n'.format(
                         epoch=epoch,
-                        loss=valid_loss,
-                        accuracy=100*valid_accuracy,
-                        recall=100*valid_recall,
-                        f1=100*valid_f1)
-                    )
+                        loss=valid_loss))
+                    log_tf.rite('%s\n' % valid_report_df.to_string())
                 else:
                     log_tf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
@@ -375,7 +369,7 @@ def train(epoch):
         #  total_accuracy = 0
         #  total_recall = 0
         #  total_f1 = 0
-        total_report_dict = None
+        total_report_df = None
 
     global_step = 0
     for step, batch in enumerate(tqdm(
@@ -394,7 +388,7 @@ def train(epoch):
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
-                loss, report_dict = cal_performance(
+                loss, report_df = cal_performance(
                     outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
@@ -415,7 +409,7 @@ def train(epoch):
                 #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
                 #  + C * penal/train_loader.batch_size
             else:
-                loss, report_dict = cal_performance(outputs.double(), labels)
+                loss, report_df = cal_performance(outputs.double(), labels)
 
         else:
             loss = cal_performance(outputs.double(), labels.double())
@@ -442,19 +436,11 @@ def train(epoch):
             #  model.parameters(), args.max_grad_norm)
 
         if args.problem == 'classification':
-            """
-            total_label += labels.size(0)
-            total_accuracy += accuracy
-            total_recall += recall
-            total_f1 += f1
-            """
-            if total_report_dict is None:
-                total_report_dict = report_dict
+            if total_report_df is None:
+                total_report_df = report_df
             else:
-                for key1, value1 in report_dict.items():
-                    for key2, value2 in total_report_dict[key1].items():
-                        total_report_dict[key1][key2] += value2
-
+                total_report_df = total_report_df.add(report_df)
+    
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
         """
@@ -464,12 +450,8 @@ def train(epoch):
         avg_recall = total_recall / times
         avg_f1 = total_f1 / times
         """
-        avg_report_dict = {}
-        for key1, value1 in total_report_dict.items():
-            avg_report_dict[key1] = {}
-            for key2, value2 in total_report_dict[key1].items():
-                avg_report_dict[key1][key2] = value2 / global_step
-        return avg_loss, avg_report_dict
+        avg_report_df = total_report_df / global_step
+        return avg_loss, avg_report_df
     return avg_loss
 
 
@@ -482,7 +464,7 @@ def eval(epoch):
         #  total_accuracy = 0
         #  total_recall = 0
         #  total_f1 = 0
-        total_report_dict = None
+        total_report_df = None
 
     global_step = 0
     with torch.no_grad():
@@ -501,7 +483,7 @@ def eval(epoch):
 
             if args.problem == 'classification':
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
-                loss, report_dict = cal_performance(outputs.double(), labels)
+                loss, report_df = cal_performance(outputs.double(), labels)
             else:
                 loss = cal_performance(outputs.double(), labels.double())
 
@@ -514,21 +496,16 @@ def eval(epoch):
                 #  total_accuracy += accuracy
                 #  total_recall += recall
                 #  total_f1 += f1
-                if total_report_dict is None:
-                    total_report_dict = report_dict
+                if total_report_df is None:
+                    total_report_df = report_df
                 else:
-                    for key1, value1 in report_dict.items():
-                        for key2, value2 in total_report_dict[key1].items():
-                            total_report_dict[key1][key2] += value2
+                    total_report_df = total_report_df.add(report_df)
 
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
-        avg_report_dict = {}
-        for key1, value1 in total_report_dict.items():
-            avg_report_dict[key1] = {}
-            for key2, value2 in total_report_dict[key1].items():
-                avg_report_dict[key1][key2] = value2 / global_step
-        return avg_loss, avg_report_dict
+        avg_report_df = total_report_df / global_step
+
+        return avg_loss, avg_report_df
     return avg_loss
 
 
@@ -644,7 +621,6 @@ def cal_performance(pred, gold):
 
         accuracy = accuracy_score(gold, pred)
 
-        """
         def intersection(list1, list2):
             # Use of hybrid method
             temp1 = set(list1)
@@ -653,6 +629,7 @@ def cal_performance(pred, gold):
             return list3
 
         labels = intersection(gold, pred)
+        """
         # print('labels: ', labels)
         # recall = recall_score(gold, pred, average='micro')
         recall = recall_score(gold, pred, average='macro')
@@ -664,10 +641,17 @@ def cal_performance(pred, gold):
         # f1 = f1_score(gold, pred, average='weighted')
         # f1 = f1_score(gold, pred, average='weighted', labels=labels)
         """
-        report_dict = classification_report(gold, pred, output_dict=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            report_dict = classification_report(gold, pred, output_dict=True)
+        # report_dict = classification_report(gold, pred, labels=labels, output_dict=True)
+        # print(report_dict)
+        report_df = pd.DataFrame(report_dict)
+        report_df = report_df.transpose()
+        report_df = report_df.fillna(0)
 
         #  return loss, accuracy, recall, f1
-        return loss, report_dict
+        return loss, report_df
     else:
         return loss
 
@@ -740,7 +724,7 @@ if __name__ == '__main__':
             #  valid_accuracy = checkpoint['valid_accuracy']
             #  valid_recall = checkpoint['valid_recall']
             #  valid_f1 = checkpoint['valid_f1']
-            print(valid_report_df)
+            print(valid_report_df, '\n')
 
         args.log_mode = 'a'
 

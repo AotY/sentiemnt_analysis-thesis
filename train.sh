@@ -5,6 +5,9 @@
 #
 # Distributed under terms of the MIT license.
 #
+
+#conda activate torch
+
 export CUDA_VISIBLE_DEVICES=0
 export CUDA_LAUNCH_BLOCKING=1
 
@@ -12,14 +15,14 @@ mkdir -p data/
 mkdir -p log/
 mkdir -p models/
 
-python train.py \
+python -W ignore train.py \
     --data_path data/label.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert \
+    --model_type bert_max \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 100 \
@@ -38,18 +41,18 @@ python train.py \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.8 \
+    --dropout 0.7 \
     --lr 0.001 \
     --min_len 1 \
     --max_len 55 \
     --batch_size 128 \
     --valid_split 0.2 \
     --test_split 2 \
-    --epochs 30 \
+    --epochs 20 \
     --start_epoch 1 \
     --lr_patience 5 \
     --es_patience 11 \
-    --device cpu \
+    --device cuda \
     --seed 23 \
     --save_mode all \
     --save_model models/ \
@@ -58,6 +61,8 @@ python train.py \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 1.0 \
+    #--warmup_proportion 0.1 \
+    #--gradient_accumulation_steps 1 \
     # --n_warmup_steps 4000 \
     #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \
