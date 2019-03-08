@@ -42,7 +42,7 @@ class BERTCM(nn.Module):
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
-    def forward(self, inputs, inputs_pos):
+    def forward(self, inputs, inputs_pos, lengths=None):
         # [batch_size, max_len, embedding_size], [] list
         outputs, attns_list = self.bert(inputs, inputs_pos)
 
@@ -56,7 +56,7 @@ class BERTCM(nn.Module):
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)
             # [batch_size, hidden_size]
-            outputs, _ = self.rnn(outputs)
+            outputs, _ = self.rnn(outputs, lengths=lengths)
         elif self.model_type == 'bert_cnn':
             # [batch_size, embedding_size]
             outputs, _ = self.cnn(outputs)

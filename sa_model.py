@@ -91,14 +91,16 @@ class SAModel(nn.Module):
             # print(inputs_pos)
             outputs, attns = self.encoder(
                 inputs.transpose(0, 1),
-                inputs_pos.transpose(0, 1)
+                inputs_pos.transpose(0, 1),
+                lengths
             )
         elif self.config.model_type.find('bert') != -1:
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
             outputs, attns = self.encoder(
                 inputs.transpose(0, 1),
-                inputs_pos.transpose(0, 1)
+                inputs_pos.transpose(0, 1),
+                lengths
             )
 
         return outputs, attns

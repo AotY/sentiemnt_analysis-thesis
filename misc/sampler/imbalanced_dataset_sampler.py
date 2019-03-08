@@ -20,7 +20,9 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
         num_samples (int, optional): number of samples to draw
     """
 
-    def __init__(self, dataset, indices=None, num_samples=None):
+    def __init__(self, dataset, indices=None, num_samples=None, replacement=True):
+        self.replacement = replacement
+        
         # if indices is not provided,
         # all elements in the dataset will be considered
         self.indices = list(range(len(dataset))) \
@@ -41,13 +43,12 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
                 label_to_count[label] = 1
 
         # weight for each sample
-        samples_weight = [1.0 / label_to_count[self._get_label(dataset, idx)]
-                   for idx in self.indices]
-
+        samples_weight = [1.0 / label_to_count[self._get_label(dataset, idx)] for idx in self.indices]
         self.samples_weight = torch.DoubleTensor(samples_weight)
 
         # weight for each label
-        min_label_count = min(label_to_count.values())
+        # min_label_count = min(label_to_count.values())
+        min_label_count = 1.0
         labels_weight = [min_label_count / label_to_count[label] for label in range(len(label_to_count))]
         self.labels_weight = torch.DoubleTensor(labels_weight)
         self.labels_count = [label_to_count[label] for label in range(len(label_to_count))]
@@ -70,8 +71,11 @@ class ImbalancedDatasetSampler(data.sampler.Sampler):
         If not, they are drawn without replacement, which means that when a
         sample index is drawn for a row, it cannot be drawn again for that row.
         """
-        return (self.indices[i] for i in
-                torch.multinomial(self.samples_weight, self.num_samples, replacement=True))
+        # return (self.indices[i] for i in
+                # torch.multinomial(self.samples_weight, self.num_samples, replacement=self.replacement))
+
+        return iter(torch.multinomial(self.samples_weight, self.num_samples, self.replacement).tolist())
+
 
     def __len__(self):
         return self.num_samples

@@ -30,6 +30,7 @@ class RNNEncoder(nn.Module):
         if embedding is not None:
             self.embedding = embedding
             self.embedding_size = embedding.embedding_dim
+            self.from_bert = False
         else:
             self.from_bert = True
 
@@ -79,7 +80,6 @@ class RNNEncoder(nn.Module):
             embedded = inputs
 
         # embedded: [max_len, batch_size, embedding_size]
-
         if lengths is not None:
             embedded = nn.utils.rnn.pack_padded_sequence(embedded, lengths)
 

@@ -49,7 +49,7 @@ from visualization.transformer import seaborn_draw
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--data_dir', type=str, help='')
-parser.add_argument('--label_max_ratio', type=float, default=0.8)
+parser.add_argument('--max_label_ratio', type=float, default=1.0)
 parser.add_argument('--visualization_dir', type=str, help='')
 parser.add_argument('--vocab_path', type=str, help='')
 parser.add_argument('--vocab_size', type=int, help='')
@@ -117,7 +117,7 @@ print(' '.join(sys.argv))
 
 torch.random.manual_seed(args.seed)
 device = torch.device(args.device)
-print('device: {}'.format(device))
+# print('device: {}'.format(device))
 
 # load vocab
 vocab = Vocab()
@@ -132,7 +132,9 @@ datas = load_data(args, vocab)
 train_data, valid_data, test_data, args = build_dataloader(args, datas)
 args.classes_weight = args.classes_weight.to(device)
 print('train classes_count: {}'.format(args.classes_count))
-print('train classes_weight: {}'.format(args.classes_weight))
+classes_ratio = [count / sum(args.classes_count) for count in args.classes_count]
+print('train classes_raio: {}'.format(classes_ratio))
+print('cross_entropy classes_weight: {}'.format(args.classes_weight))
 
 # load pretrained embedding TODO
 pretrained_embedding = None
@@ -163,22 +165,20 @@ args.batch_size = args.batch_size // args.gradient_accumulation_steps
 if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
     print('len(train_data): ', len(train_data))
-    t_total = int(len(train_data) /
-                  args.gradient_accumulation_steps) * args.epochs
+    t_total = int(len(train_data) / args.gradient_accumulation_steps) * args.epochs
     print('t_total: ', t_total)
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'norm.bias', 'norm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(
-            nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(
-            nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer = BertAdam(
         optimizer_grouped_parameters,
         lr=args.lr,
         warmup=args.warmup_proportion,
-        t_total=t_total)
+        t_total=t_total
+    )
 
 else:
     #  scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=0.5)
@@ -188,7 +188,6 @@ else:
         betas=(0.9, 0.98),
         eps=1e-09
     )
-
     """
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -245,7 +244,7 @@ def train_epochs():
             print(' (Training) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                 loss=train_loss,
                 elapse=(time.time()-start)/60))
-            print(train_report_df, '\n')
+            # print(train_report_df, '\n')
 
             #  print(' (Training) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
             #  'recall: {recall:3.3f}%, f1: {f1: 3.3f}%, '
@@ -349,7 +348,7 @@ def train_epochs():
                     log_vf.write('{epoch}, {loss: 8.5f},\n'.format(
                         epoch=epoch,
                         loss=valid_loss))
-                    log_tf.write('%s\n' % valid_report_df.to_string())
+                    log_vf.write('%s\n' % valid_report_df.to_string())
                 else:
                     log_tf.write('{epoch}, {loss: 8.5f}, \n'.format(
                         epoch=epoch,
@@ -381,19 +380,17 @@ def train(epoch):
             desc=' (Training: %d) ' % epoch, leave=False)):
         # prepare data
         # [max_len, batch_size]
-        inputs, lengths, labels, inputs_pos = map(
-            lambda x: x.to(device), batch)
-
-        loss = 0
+        inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
 
         outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos)
+
+        loss = 0
 
         if args.problem == 'classification':
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
-                loss, report_df = cal_performance(
-                    outputs.double() + 1e-8, labels)
+                loss, report_df = cal_performance(outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
                 attnsT = attns.transpose(1, 2)
@@ -410,8 +407,6 @@ def train(epoch):
                     attns @ attnsT - identity)
 
                 loss = loss + args.penalization_coeff * penalization / args.batch_size
-                #  loss = criterion(y_pred.type(torch.DoubleTensor).squeeze(1)+1e-8,y)
-                #  + C * penal/train_loader.batch_size
             else:
                 loss, report_df = cal_performance(outputs.double(), labels)
 
@@ -651,8 +646,10 @@ def cal_performance(pred, gold):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             report_dict = classification_report(gold, pred, output_dict=True)
+
         # report_dict = classification_report(gold, pred, labels=labels, output_dict=True)
         # print(report_dict)
+
         report_df = pd.DataFrame(report_dict)
         report_df = report_df.transpose()
         #  if len(report_df.index) < (args.n_classes + 3):
@@ -675,12 +672,15 @@ def cal_loss(pred, gold, smoothing):
             n_classes = pred.size(1)
 
             one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
-            one_hot = one_hot * (1 - eps) + (1 - one_hot) * \
-                eps / (n_classes - 1)
+            one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_classes - 1)
 
             log_prb = F.log_softmax(pred, dim=1)
 
+            # [class]
             loss = -(one_hot * log_prb).sum(dim=1)
+            print('loss: ', loss.shape)
+            if args.classes_weight is not None and len(args.classes_weight) != 0:
+                loss = loss * args.classes_weight
             loss = loss.sum()  # average later
         else:
             if args.classes_weight is not None and len(args.classes_weight) != 0:

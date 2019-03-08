@@ -23,11 +23,11 @@ python -W ignore train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_avg \
+    --model_type cnn \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 100 \
-    --hidden_size 100 \
+    --hidden_size 256 \
     --num_layers 2 \
     --t_num_layers 1 \
     --k_size 32 \
@@ -62,6 +62,7 @@ python -W ignore train.py \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 1.0 \
+    #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \
     # --n_warmup_steps 4000 \
@@ -69,7 +70,6 @@ python -W ignore train.py \
     #--text 没看多久，看得简单，感觉很一般。 \
     #--text 医生医术很高超，还有态度很棒！
     #--text 太差了，态度差，排队慢。
-    #--sampler \
     # --classes_weight 0.557 1.0 0.038 \
     #--classes_weight  0.0082 0.00151 0.000053 \
     # --smoothing \

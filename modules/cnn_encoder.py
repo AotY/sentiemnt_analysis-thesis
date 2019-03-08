@@ -37,6 +37,7 @@ class CNNEncoder(nn.Module):
         if embedding is not None:
             self.embedding = embedding
             self.embedding_size = embedding.embedding_dim
+            self.from_bert = False
         else:
             self.from_bert = True
 
@@ -49,21 +50,21 @@ class CNNEncoder(nn.Module):
         self.conv1 = nn.Conv2d(
             self.in_channels,
             self.out_channels,
-            (self.kernel_heights[0], self.embedding_size),
+            (self.kernel_heights[0], config.embedding_size),
             self.stride,
             self.padding
         )
         self.conv2 = nn.Conv2d(
             self.in_channels,
             self.out_channels,
-            (self.kernel_heights[1], self.embedding_size),
+            (self.kernel_heights[1], config.embedding_size),
             self.stride,
             self.padding
         )
         self.conv3 = nn.Conv2d(
             self.in_channels,
             self.out_channels,
-            (self.kernel_heights[2], self.embedding_size),
+            (self.kernel_heights[2], config.embedding_size),
             self.stride,
             self.padding
         )
@@ -97,7 +98,7 @@ class CNNEncoder(nn.Module):
 
         return max_out
 
-    def forward(self, inputs):
+    def forward(self, inputs, lengths=None):
         """
         The idea of the Convolutional Neural Netwok for Text Classification is very simple.
         We perform convolution operation on the embedding matrix.

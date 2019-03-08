@@ -49,7 +49,7 @@ def load_data(config, vocab):
             np.random.shuffle(label_dates[label])
             total_sample += len(label_dates[label])
 
-        label_max_smaple = int(total_sample * config.label_max_ratio)
+        label_max_smaple = int(total_sample * config.max_label_ratio)
 
         for label in label_dates.keys():
             if len(label_dates[label]) > label_max_smaple:
@@ -88,7 +88,7 @@ def build_dataloader(config, datas):
     train_data = data.DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=True,
+        shuffle=False if config.sampler else True,
         num_workers=4,
         collate_fn=collate_fn,
         sampler=train_sampler
@@ -97,7 +97,7 @@ def build_dataloader(config, datas):
     valid_data = data.DataLoader(
         valid_dataset,
         batch_size=config.batch_size,
-        shuffle=True,
+        shuffle=False,
         num_workers=2,
         collate_fn=collate_fn,
 
