@@ -58,10 +58,10 @@ python -W ignore train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
-    --use_pos \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 1.0 \
+    --use_pos \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \

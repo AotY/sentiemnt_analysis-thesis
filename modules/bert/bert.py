@@ -35,6 +35,9 @@ class BERT(nn.Module):
 
         super().__init__()
         self.max_len = config.max_len
+
+        self.use_pos = config.use_pos
+
         self.d_model = config.embedding_size
         self.num_layers = config.t_num_layers
         self.num_heads = config.num_heads
@@ -45,9 +48,11 @@ class BERT(nn.Module):
         # embedding for BERT, sum of positional, segment, token embeddings
         #  self.embedding = BERTEmbedding(vocab_size=vocab_size, embed_size=d_model)
         self.embedding = embedding
-        #  self.pos_embedding = PositionEmbedding(self.d_model, config.max_len)
-        self.pos_embedding = nn.Embedding(
-            self.max_len + 1, self.d_model, padding_idx=PAD_ID)
+
+        if self.use_pos:
+            #  self.pos_embedding = PositionEmbedding(self.d_model, config.max_len)
+            self.pos_embedding = nn.Embedding(
+                self.max_len + 1, self.d_model, padding_idx=PAD_ID)
 
         self.dropout = nn.Dropout(p=config.dropout)
 
@@ -63,8 +68,12 @@ class BERT(nn.Module):
         # torch.ByteTensor([batch_size, 1, seq_len, seq_len)
         mask = (inputs > 0).unsqueeze(1).repeat(1, inputs.size(1), 1).unsqueeze(1)
 
-        # embedding the indexed sequence to sequence of vectors
-        outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
+        if self.use_pos:
+            # embedding the indexed sequence to sequence of vectors
+            outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
+        else:
+            outputs = self.embedding(inputs)
+
         outputs = self.dropout(outputs)
 
         # running over multiple transformer blocks

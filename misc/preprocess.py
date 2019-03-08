@@ -55,6 +55,7 @@ def cleaning_stats():
     score_cleaned_file = open(args.score_cleaned_path, 'w', encoding='utf-8')
     cleaned_datas = list()
     error_lines = 0
+    line_set = set()
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
             #  print('dir_name ---------> %s' % dir_name)
@@ -63,7 +64,6 @@ def cleaning_stats():
             file_path = os.path.join(dir_name, file_name)
             print('file_path---------> %s' % file_path)
             with open(file_path, 'r', encoding='utf-8') as f:
-                line_set = set()
                 for line in tqdm(f):
                     line = line.rstrip()
                     try:
@@ -119,7 +119,7 @@ def cleaning_stats():
                     label_files[int(label) - 1].write('%s\t%s\n' % (label, text.replace(' ', '')))
 
                     cleaned_datas.append((disease, doctor, date, score, label, text))
-                del line_set
+    del line_set
 
     # shuffle
     random.shuffle(cleaned_datas)
