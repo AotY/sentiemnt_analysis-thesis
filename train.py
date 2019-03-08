@@ -134,7 +134,8 @@ args.classes_weight = args.classes_weight.to(device)
 print('train classes_count: {}'.format(args.classes_count))
 classes_ratio = [count / sum(args.classes_count) for count in args.classes_count]
 print('train classes_raio: {}'.format(classes_ratio))
-print('cross_entropy classes_weight: {}'.format(args.classes_weight))
+if not args.sampler:
+    print('cross_entropy classes_weight: {}'.format(args.classes_weight))
 
 # load pretrained embedding TODO
 pretrained_embedding = None

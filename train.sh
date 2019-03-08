@@ -19,7 +19,7 @@ python -W ignore train.py \
     --data_path data/label.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
-    --max_label_ratio 0.8 \
+    --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
@@ -62,7 +62,7 @@ python -W ignore train.py \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 1.0 \
-    #--sampler \
+    --sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \
     # --n_warmup_steps 4000 \
