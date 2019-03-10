@@ -51,10 +51,13 @@ def cleaning_stats():
     for i in range(3):
         label_files[i] = open(os.path.join(args.save_dir, 'label.%d.txt' % (i+1)), 'w', encoding='utf-8')
 
+    disease_label_dists = [Counter(), Counter(), Counter()]
+
     label_cleaned_file = open(args.label_cleaned_path, 'w', encoding='utf-8')
     score_cleaned_file = open(args.score_cleaned_path, 'w', encoding='utf-8')
     cleaned_datas = list()
     error_lines = 0
+    line_set = set()
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
             #  print('dir_name ---------> %s' % dir_name)
@@ -63,7 +66,6 @@ def cleaning_stats():
             file_path = os.path.join(dir_name, file_name)
             print('file_path---------> %s' % file_path)
             with open(file_path, 'r', encoding='utf-8') as f:
-                line_set = set()
                 for line in tqdm(f):
                     line = line.rstrip()
                     try:
@@ -76,6 +78,8 @@ def cleaning_stats():
 
                     if not bool(score) or not bool(text):
                         continue
+
+                    text = text.rstrip().replace(' ', '')
 
                     if len(text) < args.min_len or len(text) > args.max_len:
                         continue
@@ -99,6 +103,7 @@ def cleaning_stats():
                         label = 3
                     else:
                         raise ValueError('score: %s is not valid.' % score)
+                        continue
 
                     label_dict.update(str(label))
 
@@ -108,18 +113,21 @@ def cleaning_stats():
                     freq_dict.update(tokens)
 
                     len_dict[len(tokens)] = len_dict.get(len(tokens), 0) + 1
+                    
+                    # disease label dist
+                    disease_label_dists[label-1].update({disease: 1})
 
                     text = ' '.join(tokens)
 
                     # split by score
                     # score_files[int(score) - 1].write('%s\t%s\t%s\t%s\t%s\n' % (
                         # disease, doctor, date, score, text.replace(' ', '')))
-                    score_files[int(score) - 1].write('%s\t%s\n' % (score, text.replace(' ', '')))
+                    score_files[int(score) - 1].write('%s\t%s\t%s\n' % (disease, score, text.replace(' ', '')))
 
-                    label_files[int(label) - 1].write('%s\t%s\n' % (label, text.replace(' ', '')))
+                    label_files[int(label) - 1].write('%s\t%s\t%s\n' % (disease, label, text.replace(' ', '')))
 
                     cleaned_datas.append((disease, doctor, date, score, label, text))
-                del line_set
+    del line_set
 
     # shuffle
     random.shuffle(cleaned_datas)
@@ -142,11 +150,11 @@ def cleaning_stats():
     for score_file in score_files:
         score_file.close()
 
-    return freq_dict, len_dict, label_dict, score_dict
+    return freq_dict, len_dict, label_dict, score_dict, disease_label_dists
 
 
 def main():
-    freq_dict, len_dict, label_dict, score_dict = cleaning_stats()
+    freq_dict, len_dict, label_dict, score_dict, disease_label_dists = cleaning_stats()
     freq_list = sorted(freq_dict.items(),
                        key=lambda item: item[1], reverse=True)
     save_distribution(freq_list, args.vocab_freq_path)
@@ -162,6 +170,12 @@ def main():
     score_list = sorted(score_dict.items(),
                       key=lambda item: item[0], reverse=False)
     save_distribution(score_list, os.path.join(args.save_dir, 'score.dist'), percentage=True)
+
+    for i in range(3):
+        disease_label_list = sorted(disease_label_dists[i].items(),
+                          key=lambda item: item[1], reverse=True)
+        save_distribution(disease_label_list, os.path.join(args.save_dir, 'disease.label_%d.dist' % (i+1)), percentage=False)
+
 
 
 if __name__ == '__main__':

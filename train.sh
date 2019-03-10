@@ -23,7 +23,7 @@ python -W ignore train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type cnn \
+    --model_type bert_cnn \
     --n_classes 3 \
     --rnn_type LSTM \
     --embedding_size 100 \
@@ -38,14 +38,14 @@ python -W ignore train.py \
     --num_heads 2 \
     --bidirectional \
     --in_channels 1 \
-    --out_channels 256 \
+    --out_channels 100 \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.7 \
+    --dropout 0.8 \
     --lr 0.001 \
     --min_len 1 \
-    --max_len 55 \
+    --max_len 50 \
     --batch_size 128 \
     --valid_split 0.2 \
     --test_split 2 \
@@ -58,11 +58,11 @@ python -W ignore train.py \
     --save_mode all \
     --save_model models/ \
     --mode train \
-    --use_pos \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 1.0 \
-    --sampler \
+    #--use_pos \
+    #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \
     # --n_warmup_steps 4000 \

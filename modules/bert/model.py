@@ -49,9 +49,13 @@ class BERTCM(nn.Module):
         if self.model_type == 'bert':
             outputs = outputs[:, 0]
         elif self.model_type == 'bert_max':
-            outputs = outputs.max(dim=1)[0]
+            outputs = outputs.transpose(1, 2)
+            outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            # outputs = outputs.max(dim=1)[0]
         elif self.model_type == 'bert_avg':
-            outputs = outputs.mean(dim=1)
+            outputs = outputs.transpose(1, 2)
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            # outputs = outputs.mean(dim=1)
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)

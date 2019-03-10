@@ -107,7 +107,7 @@ def build_dataloader(config, datas):
         test_dataset,
         batch_size=config.batch_size,
         shuffle=False,
-        num_workers=2,
+        num_workers=1,
         collate_fn=collate_fn,
     )
 

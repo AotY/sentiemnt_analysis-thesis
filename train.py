@@ -684,7 +684,7 @@ def cal_loss(pred, gold, smoothing):
                 loss = loss * args.classes_weight
             loss = loss.sum()  # average later
         else:
-            if args.classes_weight is not None and len(args.classes_weight) != 0:
+            if args.classes_weight is not None and len(args.classes_weight) != 0 and not args.sampler:
                 # weight = torch.tensor(args.classes_weight, device=device)
                 #  loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
                 # print('pred: ', pred.shape)
