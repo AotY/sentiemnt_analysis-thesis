@@ -58,6 +58,9 @@ def cleaning_stats():
     cleaned_datas = list()
     error_lines = 0
     line_set = set()
+
+    label_sets = [set(), set(), set()]
+
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
             #  print('dir_name ---------> %s' % dir_name)
@@ -89,11 +92,6 @@ def cleaning_stats():
                         continue
                     line_set.add(line_str)
 
-                    # format date
-                    date = re.findall(r'\d+', date)
-                    if len(date) > 0:
-                        date = int(date[0])
-
                     # label
                     if score in ['1', '2']:
                         label = 1
@@ -105,6 +103,22 @@ def cleaning_stats():
                         raise ValueError('score: %s is not valid.' % score)
                         continue
 
+                    label_sets[label-1].add(text)
+                    if label == 3:
+                        if text in label_sets[0] or text in label_sets[1]:
+                            continue
+                    elif label == 2:
+                        if text in label_sets[0] or text in label_sets[2]:
+                            continue
+                    else:
+                        if text in label_sets[1] or text in label_sets[2]:
+                            continue
+
+                    # format date
+                    date = re.findall(r'\d+', date)
+                    if len(date) > 0:
+                        date = int(date[0])
+
                     label_dict.update(str(label))
 
                     score_dict.update(str(score))
@@ -113,7 +127,7 @@ def cleaning_stats():
                     freq_dict.update(tokens)
 
                     len_dict[len(tokens)] = len_dict.get(len(tokens), 0) + 1
-                    
+
                     # disease label dist
                     disease_label_dists[label-1].update({disease: 1})
 

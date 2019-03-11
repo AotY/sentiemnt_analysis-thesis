@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from modules.utils import rnn_factory, rnn_init
+from modules.cnn_encoder import CNNEncoder
 
 
 class RNNEncoder(nn.Module):
@@ -56,8 +57,12 @@ class RNNEncoder(nn.Module):
 
         if not self.from_bert:
             if self.problem == 'classification':
-                self.linear_final = nn.Linear(
-                    self.hidden_size * self.bidirection_num, self.n_classes)
+                if self.model_type == 'rnn_cnn':
+                    self.cnn = CNNEncoder(config)
+                    self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
+                else:
+                    self.linear_final = nn.Linear(
+                        self.hidden_size * self.bidirection_num, self.n_classes)
             else:
                 # self.linear_regression_dense = nn.Linear(
                     # self.hidden_size * self.bidirection_num, config.regression_dense_size)
@@ -100,10 +105,21 @@ class RNNEncoder(nn.Module):
             final_state = hidden_state
             if self.rnn_type == 'LSTM':
                 final_state = hidden_state[0]
-                final_state = final_state.view(self.num_layers, final_state.size(1), -1)
+                final_state = final_state.view(
+                    self.num_layers, final_state.size(1), -1)
                 final_state = torch.sum(final_state, dim=0)
 
             outputs, attns = self.attention_net(outputs, final_state)
+        elif self.model_type == 'rnn_cnn':
+            # [batch_size, max_len, hidden_size]
+            outputs = outputs.permute(1, 0, 2)
+            outputs = self.cnn(outputs)
+        elif self.model_type == 'rnn_avg':
+            outputs = outputs.transpose(1, 2)
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'rnn_max':
+            outputs = outputs.transpose(1, 2)
+            outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
         else:
             outputs = outputs[-1]
             attns = None
@@ -116,9 +132,7 @@ class RNNEncoder(nn.Module):
                 # outputs = self.linear_regression_dense(outputs)
                 outputs = self.linear_regression_final(outputs)
 
-            return outputs, attns
-        else:
-            return outputs, attns
+        return outputs, attns
 
     def attention_net(self, lstm_outputs, final_state):
         """
@@ -154,6 +168,7 @@ class RNNEncoder(nn.Module):
         soft_attn_weights = F.softmax(attn_weights, 1)
 
         # [batch_size, hidden_size]
-        new_hidden_state = torch.bmm(lstm_outputs.transpose(1, 2), soft_attn_weights).squeeze(2)
+        new_hidden_state = torch.bmm(lstm_outputs.transpose(
+            1, 2), soft_attn_weights).squeeze(2)
 
         return new_hidden_state, soft_attn_weights

@@ -39,7 +39,8 @@ class SAModel(nn.Module):
 
         embedding = load_embedding(config, pretrained_embedding)
 
-        if config.model_type in ['rnn', 'rnn_attention']:
+        #  if config.model_type in ['rnn', 'rnn_attention']:
+        if self.config.model_type.startswith('rnn'):
             self.encoder = RNNEncoder(config, embedding)
         elif config.model_type == 'cnn':
             self.encoder = CNNEncoder(config, embedding)
@@ -47,9 +48,11 @@ class SAModel(nn.Module):
             self.encoder = RCNNEncoder(config, embedding)
         elif config.model_type == 'self_attention':
             self.encoder = StructuredSelfAttention(config, embedding)
-        elif config.model_type.find('transformer') != -1:
+        elif self.config.model_type.startswith('transformer'):
+        #  elif config.model_type.find('transformer') != -1:
             self.encoder = TransformerCM(config, embedding)
-        elif config.model_type.find('bert') != -1:
+        elif self.config.model_type.startswith('bert'):
+        #  elif config.model_type.find('bert') != -1:
             self.encoder = BERTCM(config, embedding)
 
     def forward(self,
@@ -62,7 +65,8 @@ class SAModel(nn.Module):
             inputs_pos: [max_len, batch_size]
             lengths: [batch_size]
         '''
-        if self.config.model_type in ['rnn', 'rnn_attention']:
+        #  if self.config.model_type in ['rnn', 'rnn_attention']:
+        if self.config.model_type.startswith('rnn'):
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
                 inputs,
@@ -86,7 +90,8 @@ class SAModel(nn.Module):
                 inputs,
                 lengths
             )
-        elif self.config.model_type.find('transformer') != -1:
+        #  elif self.config.model_type.find('transformer') != -1:
+        elif self.config.model_type.startswith('transformer'):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
             outputs, attns = self.encoder(
@@ -94,7 +99,8 @@ class SAModel(nn.Module):
                 inputs_pos.transpose(0, 1),
                 lengths
             )
-        elif self.config.model_type.find('bert') != -1:
+        #  elif self.config.model_type.find('bert') != -1:
+        elif self.config.model_type.startswith('bert'):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
             outputs, attns = self.encoder(
@@ -102,6 +108,8 @@ class SAModel(nn.Module):
                 inputs_pos.transpose(0, 1),
                 lengths
             )
+        else:
+            raise ValueError('%s is invalid.' % self.config.model_type)
 
         return outputs, attns
 
