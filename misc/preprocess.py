@@ -55,6 +55,7 @@ def cleaning_stats():
 
     label_cleaned_file = open(args.label_cleaned_path, 'w', encoding='utf-8')
     score_cleaned_file = open(args.score_cleaned_path, 'w', encoding='utf-8')
+
     cleaned_datas = list()
     error_lines = 0
     line_set = set()
@@ -91,14 +92,14 @@ def cleaning_stats():
                     line_set.add(line_str)
 
                     # label
-                    # if score in ['1', '2']:
-                    if score == '1':
+                    if score in ['1', '2']:
+                    #  if score == '1':
                         label = 1
-                    elif score in ['2', '3']:
+                    #  elif score in ['2', '3']:
+                        #  label = 2
+                    #  elif score in ['4', '5']:
+                    elif score in ['5']:
                         label = 2
-                    elif score in ['4', '5']:
-                    # elif score in ['5']:
-                        label = 3
                     else:
                         # raise ValueError('score: %s is not valid.' % score)
                         continue
