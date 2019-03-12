@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--syno_path', type=str, help='')
+parser.add_argument('--cilin_path', type=str, help='')
 parser.add_argument('--save_path', type=str, help='')
 parser.add_argument('--augment_num', type=int, help='')
 parser.add_argument('--augment_labels', nargs='+', type=int, help='')
@@ -39,6 +40,9 @@ with open(args.syno_path, 'r') as f:
         except ValueError as e:
             print(line)
 
+        if len(w1) == 1 or len(w2) == 1:
+            continue
+
         if syno_dict.get(w1) is None:
             syno_dict[w1] = list()
 
@@ -51,8 +55,23 @@ with open(args.syno_path, 'r') as f:
         if w1 not in syno_dict[w2]:
             syno_dict[w2].append(w1)
 
+print('Loading cilin...')
+with open(args.cilin_path, 'r') as f:
+    for line in f:
+        line = line.rstrip()
+        words = line.split()
+        if len(words) == 2:
+            continue
+        words = words[1:]
+        for w1 in words:
+            if syno_dict.get(w1) is None:
+                syno_dict[w1] = list()
+            for w2 in words:
+                if w1 != w2 and w2 not in syno_dict[w1]:
+                    syno_dict[w1].append(w2)
 
-print('Loading data...', args.augment_labels)
+
+print('Loading label data...', args.augment_labels)
 label_datas = {}
 for label in args.augment_labels:
     label_datas[label] = list()
@@ -80,9 +99,10 @@ for label, label_data in label_datas.items():
 
         for _ in range(args.augment_num):
             new_words = words.copy()
-            augment_count = int(np.random.geometric(p=0.5, size=1))
-            if augment_count > len(syno_words):
-                augment_count = len(syno_words)
+            #  augment_count = int(np.random.geometric(p=0.5, size=1))
+            #  if augment_count > len(syno_words):
+            #  augment_count = len(syno_words)
+            augment_count = np.random.randint(low=1, high=len(syno_words) + 1)
 
             for idx, word in syno_words[:augment_count]:
                 chose_idx = int(np.random.geometric(p=0.5, size=1))
