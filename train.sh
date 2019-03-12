@@ -16,15 +16,15 @@ mkdir -p log/
 mkdir -p models/
 
 python train.py \
-    --data_path data/label.re.cleaned.txt \
+    --data_path data/label.augment.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type self_attention \
-    --n_classes 3 \
+    --model_type cnn \
+    --n_classes 2 \
     --rnn_type LSTM \
     --embedding_size 128 \
     --hidden_size 128 \
