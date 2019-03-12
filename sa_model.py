@@ -86,10 +86,7 @@ class SAModel(nn.Module):
             )
         elif self.config.model_type == 'self_attention':
             # [batch_size, n_classes], [batch_size, num_heads, max_len]
-            outputs, attns = self.encoder(
-                inputs,
-                lengths
-            )
+            outputs, attns = self.encoder(inputs, lengths)
         #  elif self.config.model_type.find('transformer') != -1:
         elif self.config.model_type.startswith('transformer'):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list

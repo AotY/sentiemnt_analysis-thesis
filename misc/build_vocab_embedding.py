@@ -14,14 +14,14 @@ import numpy as np
 from gensim.models import KeyedVectors
 from os.path import exists
 
-from misc.vocab import Vocab
+from vocab import Vocab
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--vocab_path', type=str, help='')
 parser.add_argument('--wordvec_file', type=str, help='')
-parser.add_argument('--type', type=int, help='')
-parser.add_argument('--embedding_size', type=str, help='')
+parser.add_argument('--type', type=str, help='')
+parser.add_argument('--embedding_size', type=int, help='')
 parser.add_argument('--save_path', type=str, help='')
 
 args = parser.parse_args()
@@ -40,16 +40,22 @@ def load_word2vec():
         args.wordvec_file, binary=True)
 
     word_vectors = []
-    for id, word in tqdm(vocab.idx2word.items()):
+    miss_count = 0
+    # for id, word in tqdm(vocab.idx2word.items()):
+    items = sorted(vocab.idx2word.items(), key=lambda x: x[0])
+    for id, word in items:
+        # print(id, word)
         if word in word2vec.vocab:
             vector = word2vec[word]
         else:
             vector = np.random.normal(
                 scale=0.20, size=args.embedding_size)  # random vector
+            miss_count += 1
 
         word_vectors.append(vector)
     weight = np.stack(word_vectors)
     np.save(args.save_path, weight)
+    print('miss_count:', miss_count)
     #  return weight
 
 

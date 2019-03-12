@@ -23,12 +23,9 @@ class StructuredSelfAttention(nn.Module):
     and without pruning. Slight modifications have been done for speedup
     """
 
-    def __init__(self,
-                 config,
-                 embedding):
+    def __init__(self, config, embedding):
         """
         Initializes parameters suggested in paper
-
         Args:
             batch_size  : {int} batch_size used for training
             hidden_size: {int} hidden dimension for lstm
@@ -71,7 +68,7 @@ class StructuredSelfAttention(nn.Module):
             hidden_size=self.hidden_size,
             num_layers=config.num_layers,
             bidirectional=config.bidirectional,
-            dropout=config.dropout
+            dropout=0.2 if config.num_layers > 1 else 0
         )
 
         rnn_init(config.rnn_type, self.rnn)

@@ -13,6 +13,6 @@ python misc/build_vocab_embedding.py \
     --wordvec_file data/GoogleNews-vectors-negative300.bin \
 	--type word2vec \
 	--embedding_size 300 \
-	--save_path data/word2vec.vocab.npz \
+	--save_path data/word2vec.vocab.npy \
 
 /

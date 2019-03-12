@@ -50,7 +50,7 @@ class RNNEncoder(nn.Module):
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             bidirectional=config.bidirectional,
-            dropout=config.dropout
+            dropout=0.1 if self.num_layers > 1 else 0
         )
 
         rnn_init(config.rnn_type, self.rnn)
@@ -98,7 +98,7 @@ class RNNEncoder(nn.Module):
 
         # print('outputs shape: ', outputs.shape)
 
-        #  if self.model_type == 'rnn_attention':
+        attns = None
         if self.model_type.find('attention') != -1:
             # [batch_size, max_len, hidden_size]
             outputs = outputs.permute(1, 0, 2)
@@ -108,7 +108,6 @@ class RNNEncoder(nn.Module):
                 final_state = final_state.view(
                     self.num_layers, final_state.size(1), -1)
                 final_state = torch.sum(final_state, dim=0)
-
             outputs, attns = self.attention_net(outputs, final_state)
         elif self.model_type == 'rnn_cnn':
             # [batch_size, max_len, hidden_size]
@@ -122,7 +121,6 @@ class RNNEncoder(nn.Module):
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
         else:
             outputs = outputs[-1]
-            attns = None
 
         if not self.from_bert:
             if self.problem == 'classification':

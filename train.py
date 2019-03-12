@@ -105,6 +105,7 @@ parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
 parser.add_argument("--warmup_proportion", default=0.1, type=float,
                     help="Proportion of training to perform linear learning rate warmup for. E.g., 0.1 = 10%% of training.")
 parser.add_argument('--model_type', type=str, help='')
+parser.add_argument('--pre_trained_wv', type=str, help='')
 parser.add_argument('--problem', type=str, help='classification or regression')
 parser.add_argument('--mode', type=str, help='train, eval, test')
 parser.add_argument('--text', type=str, default='', help='text for testing.')
@@ -132,13 +133,18 @@ datas = load_data(args, vocab)
 train_data, valid_data, test_data, args = build_dataloader(args, datas)
 args.classes_weight = args.classes_weight.to(device)
 print('train classes_count: {}'.format(args.classes_count))
-classes_ratio = [count / sum(args.classes_count) for count in args.classes_count]
+classes_ratio = [count / sum(args.classes_count) * 100 for count in args.classes_count]
 print('train classes_raio: {}'.format(classes_ratio))
 if not args.sampler:
     print('cross_entropy classes_weight: {}'.format(args.classes_weight))
 
 # load pretrained embedding TODO
 pretrained_embedding = None
+
+if args.use_pretrained_embedding:
+    if args.pre_trained_wv is not None and args.pre_trained_wv != '':
+        pretrained_embedding = np.load(args.pre_trained_wv)
+        pretrained_embedding = torch.from_numpy(pretrained_embedding)
 
 # model
 model = SAModel(
@@ -163,6 +169,7 @@ args.batch_size = args.batch_size // args.gradient_accumulation_steps
 #  args.embedding_size,
 #  args.n_warmup_steps
 #  )
+scheduler = None
 if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
     print('len(train_data): ', len(train_data))
@@ -189,16 +196,14 @@ else:
         betas=(0.9, 0.98),
         eps=1e-09
     )
-    """
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
         factor=0.3,
-        #  min_lr=1e-08,
+        min_lr=1e-08,
         patience=args.lr_patience,
         verbose=True
     )
-    """
 
 # early stopping
 early_stopping = EarlyStopping(
@@ -291,7 +296,8 @@ def train_epochs():
                       elapse=(time.time()-start)/60))
 
         # update lr
-        #  scheduler.step(valid_loss)
+        if scheduler is not None:
+            scheduler.step(valid_loss)
 
         # is early_stopping
         is_stop = early_stopping.step(valid_loss)

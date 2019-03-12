@@ -15,44 +15,44 @@ mkdir -p data/
 mkdir -p log/
 mkdir -p models/
 
-python -W ignore train.py \
-    --data_path data/label.cleaned.txt \
+python train.py \
+    --data_path data/label.re.cleaned.txt \
     --vocab_path data/vocab.word2idx.dict \
     --data_dir data/ \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type rnn_cnn \
+    --model_type self_attention \
     --n_classes 3 \
     --rnn_type LSTM \
-    --embedding_size 100 \
-    --hidden_size 256 \
-    --num_layers 2 \
+    --embedding_size 128 \
+    --hidden_size 128 \
+    --num_layers 1 \
     --t_num_layers 1 \
     --k_size 32 \
     --v_size 32 \
     --inner_hidden_size 256 \
     --dense_size 128 \
     --regression_dense_size 256 \
-    --num_heads 2 \
+    --num_heads 6 \
     --bidirectional \
     --in_channels 1 \
-    --out_channels 100 \
+    --out_channels 128 \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
-    --dropout 0.8 \
+    --dropout 0.7 \
     --lr 0.001 \
     --min_len 1 \
     --max_len 50 \
     --batch_size 128 \
-    --valid_split 0.2 \
-    --test_split 2 \
+    --valid_split 0.15 \
+    --test_split 1 \
     --epochs 20 \
     --start_epoch 1 \
-    --lr_patience 5 \
-    --es_patience 11 \
+    --lr_patience 3 \
+    --es_patience 7 \
     --device cuda \
     --seed 23 \
     --save_mode all \
@@ -60,8 +60,10 @@ python -W ignore train.py \
     --mode train \
     --use_penalization \
     --penalization_coeff 1.0 \
-    --max_grad_norm 1.0 \
+    --max_grad_norm 5.0 \
     #--use_pos \
+    #--use_pretrained_embedding \
+    #--pre_trained_wv data/word2vec.vocab.npy \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \

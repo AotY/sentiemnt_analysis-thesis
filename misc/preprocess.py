@@ -59,8 +59,6 @@ def cleaning_stats():
     error_lines = 0
     line_set = set()
 
-    label_sets = [set(), set(), set()]
-
     for dir_name, subdir_list, file_list in os.walk(args.data_dir):
         for file_name in file_list:
             #  print('dir_name ---------> %s' % dir_name)
@@ -82,37 +80,28 @@ def cleaning_stats():
                     if not bool(score) or not bool(text):
                         continue
 
-                    text = text.rstrip().replace(' ', '')
+                    text = text.rstrip().replace(' ', '').replace(' ', '')
 
                     if len(text) < args.min_len or len(text) > args.max_len:
                         continue
 
-                    line_str = "{}_{}_{}_{}".format(disease, doctor, score, text)
+                    line_str = "{}_{}".format(score, text)
                     if line_str in line_set:
                         continue
                     line_set.add(line_str)
 
                     # label
-                    if score in ['1', '2']:
+                    # if score in ['1', '2']:
+                    if score == '1':
                         label = 1
-                    elif score in ['3']:
+                    elif score in ['2', '3']:
                         label = 2
                     elif score in ['4', '5']:
+                    # elif score in ['5']:
                         label = 3
                     else:
-                        raise ValueError('score: %s is not valid.' % score)
+                        # raise ValueError('score: %s is not valid.' % score)
                         continue
-
-                    label_sets[label-1].add(text)
-                    if label == 3:
-                        if text in label_sets[0] or text in label_sets[1]:
-                            continue
-                    elif label == 2:
-                        if text in label_sets[0] or text in label_sets[2]:
-                            continue
-                    else:
-                        if text in label_sets[1] or text in label_sets[2]:
-                            continue
 
                     # format date
                     date = re.findall(r'\d+', date)
@@ -163,6 +152,9 @@ def cleaning_stats():
 
     for score_file in score_files:
         score_file.close()
+
+    for label_file in label_files:
+        label_file.close()
 
     return freq_dict, len_dict, label_dict, score_dict, disease_label_dists
 

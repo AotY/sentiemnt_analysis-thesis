@@ -149,7 +149,7 @@ class MyCollate:
             inputs.append(ids)
 
             pos = [pos_i + 1 if w_i !=
-                   PAD_ID else 0 for pos_i, w_i in enumerate(ids)]
+                   PAD_ID else PAD_ID for pos_i, w_i in enumerate(ids)]
             inputs_pos.append(pos)
 
             labels.append(label)

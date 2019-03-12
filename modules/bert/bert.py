@@ -74,12 +74,12 @@ class BERT(nn.Module):
         else:
             outputs = self.embedding(inputs)
 
-        outputs = self.dropout(outputs)
-
         # running over multiple transformer blocks
         attns_list = list()
         for transformer in self.transformer_blocks:
             outputs, attns = transformer.forward(outputs, mask)
             attns_list.append(attns)
+
+        outputs = self.dropout(outputs)
 
         return outputs, attns_list
