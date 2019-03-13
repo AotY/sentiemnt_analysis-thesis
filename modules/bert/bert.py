@@ -49,7 +49,6 @@ class BERT(nn.Module):
         #  self.embedding = BERTEmbedding(vocab_size=vocab_size, embed_size=d_model)
         if embedding is not None:
             self.embedding = embedding
-
             if self.use_pos:
                 #  self.pos_embedding = PositionEmbedding(self.d_model, config.max_len)
                 self.pos_embedding = nn.Embedding(
@@ -68,17 +67,19 @@ class BERT(nn.Module):
             for _ in range(self.num_layers)
         ])
 
-    def forward(self, inputs, inputs_pos):
-        # attention masking for padded 
-        # torch.ByteTensor([batch_size, 1, seq_len, seq_len)
-        mask = (inputs > 0).unsqueeze(1).repeat(1, inputs.size(1), 1).unsqueeze(1)
-
+    def forward(self, inputs, inputs_pos=None):
+        # attention masking for padded
         if not self.from_other:
             if self.use_pos:
                 # embedding the indexed sequence to sequence of vectors
                 outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
             else:
                 outputs = self.embedding(inputs)
+            # torch.ByteTensor([batch_size, 1, max_len, max_len)
+            mask = (inputs > 0).unsqueeze(1).repeat(1, inputs.size(1), 1).unsqueeze(1)
+        else:
+            outputs = inputs
+            mask = None
 
         # running over multiple transformer blocks
         attns_list = list()

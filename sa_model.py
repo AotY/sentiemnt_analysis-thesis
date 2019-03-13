@@ -70,7 +70,8 @@ class SAModel(nn.Module):
             # [batch_size, n_classes], None
             outputs, attns = self.encoder(
                 inputs,
-                lengths
+                lengths,
+                #  inputs_pos=inputs_pos
             )
         elif self.config.model_type == 'cnn':
             # [batch_size, n_classes]

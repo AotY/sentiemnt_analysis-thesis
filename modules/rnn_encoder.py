@@ -14,7 +14,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from modules.utils import rnn_factory, rnn_init
 from modules.cnn_encoder import CNNEncoder
+from modules.bert.bert import BERT
 from modules.reduce_state import ReduceState
+
 from misc.vocab import PAD_ID
 
 
@@ -33,9 +35,9 @@ class RNNEncoder(nn.Module):
         if embedding is not None:
             self.embedding = embedding
             self.embedding_size = embedding.embedding_dim
-            self.from_bert = False
+            self.from_other = False
         else:
-            self.from_bert = True
+            self.from_other = True
 
         self.bidirection_num = 2 if config.bidirectional else 1
         self.hidden_size = config.hidden_size // self.bidirection_num
@@ -60,13 +62,14 @@ class RNNEncoder(nn.Module):
         self.reduce_state = ReduceState(self.rnn_type)
 
         if self.model_type == 'rnn_bert':
-            self.bert = self.bert = BERT(config, None)
+            self.bert = BERT(config, None)
 
-        if not self.from_bert:
+        if not self.from_other:
             if self.problem == 'classification':
                 if self.model_type == 'rnn_cnn':
                     self.cnn = CNNEncoder(config)
-                    self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
+                    self.linear_final = nn.Linear(
+                        len(config.kernel_heights) * config.out_channels, config.n_classes)
                 else:
                     self.linear_final = nn.Linear(
                         self.hidden_size * self.bidirection_num, self.n_classes)
@@ -74,7 +77,8 @@ class RNNEncoder(nn.Module):
                 # self.linear_regression_dense = nn.Linear(
                     # self.hidden_size * self.bidirection_num, config.regression_dense_size)
                 # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
-                self.linear_regression_final = nn.Linear(self.hidden_size * self.bidirection_num, 1)
+                self.linear_regression_final = nn.Linear(
+                    self.hidden_size * self.bidirection_num, 1)
 
     def forward(self, inputs, lengths=None, hidden_state=None, inputs_pos=None):
         '''
@@ -85,7 +89,7 @@ class RNNEncoder(nn.Module):
             outputs: [batch_size, n_classes]
         '''
         # embedded
-        if not self.from_bert:
+        if not self.from_other:
             embedded = self.embedding(inputs)
             embedded = self.dropout(embedded)
         else:
@@ -122,14 +126,17 @@ class RNNEncoder(nn.Module):
             outputs = self.cnn(outputs)
         elif self.model_type == 'rnn_avg':
             outputs = outputs.transpose(1, 2)
-            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            outputs = F.avg_pool1d(
+                outputs, kernel_size=outputs.size(2)).squeeze(2)
         elif self.model_type == 'rnn_max':
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
-        elif self.model_type = 'rnn_bert':
+        elif self.model_type == 'rnn_bert':
             # [batch_size, max_len, hidden_size]
             outputs = outputs.permute(1, 0, 2)
-            outputs = self.bert(outputs)
+            #  outputs = self.bert(outputs)
+            outputs, attns = self.bert(outputs, None)
+            outputs = outputs[:, 0]
         else:
             # outputs = outputs[-1]
             hidden_state = self.reduce_state(hidden_state)
@@ -138,7 +145,7 @@ class RNNEncoder(nn.Module):
             # if hidden_state.size(0) > 1:
             outputs = hidden_state[-1]
 
-        if not self.from_bert:
+        if not self.from_other:
             if self.problem == 'classification':
                 # last step output [batch_size, hidden_state]
                 outputs = self.linear_final(outputs)
