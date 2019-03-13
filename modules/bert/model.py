@@ -43,6 +43,13 @@ class BERTCM(nn.Module):
         elif self.model_type.find('bert_cnn') != -1:
             self.cnn = CNNEncoder(config)
             self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
+        elif self.model_type == 'bert_conv1d':
+            self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 3) # 48
+            self.max_pool1d1 = nn.MaxPool1d(3) # 16
+            self.conv1d2 = nn.Conv1d(config.embedding_size, config.embedding_size, 2) # 15
+            self.max_pool1d2 = nn.MaxPool1d(3) # 5
+            self.conv1d3 = nn.Conv1d(config.embedding_size, config.embedding_size, 3) # 3
+            self.max_pool1d3 = nn.MaxPool1d(3) # 1
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
@@ -85,6 +92,11 @@ class BERTCM(nn.Module):
         elif self.model_type == 'bert_cnn':
             # [batch_size, embedding_size]
             outputs, _ = self.cnn(outputs)
+        elif self.model_type == 'bert_conv1d':
+            outputs = self.max_pool1d1(F.relu(self.conv1d1(outputs)))
+            outputs = self.max_pool1d2(F.relu(self.conv1d2(outputs)))
+            outputs = self.max_pool1d3(F.relu(self.conv1d3(outputs)))
+            outputs = outputs.view(outputs.size(0), -1)
 
         if self.problem == 'classification':
             # [batch_size, ] -> [batch_size, n_classes]
