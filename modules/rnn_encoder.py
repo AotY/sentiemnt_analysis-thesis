@@ -136,7 +136,8 @@ class RNNEncoder(nn.Module):
             outputs = outputs.permute(1, 0, 2)
             #  outputs = self.bert(outputs)
             outputs, attns = self.bert(outputs, None)
-            outputs = outputs[:, 0]
+            # outputs = outputs[:, 0]
+            outputs = outputs.mean(dim=1)
         else:
             # outputs = outputs[-1]
             hidden_state = self.reduce_state(hidden_state)
