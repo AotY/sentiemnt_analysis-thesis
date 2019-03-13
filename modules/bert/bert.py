@@ -23,7 +23,7 @@ class BERT(nn.Module):
 
     def __init__(self,
                  config,
-                 embedding):
+                 embedding=None):
                  #  vocab_size, d_model=768, num_layers=12, num_heads=12, dropout=0.1):
         """
         :param vocab_size: vocab_size of total words
@@ -47,12 +47,17 @@ class BERT(nn.Module):
 
         # embedding for BERT, sum of positional, segment, token embeddings
         #  self.embedding = BERTEmbedding(vocab_size=vocab_size, embed_size=d_model)
-        self.embedding = embedding
+        if embedding is not None:
+            self.embedding = embedding
 
-        if self.use_pos:
-            #  self.pos_embedding = PositionEmbedding(self.d_model, config.max_len)
-            self.pos_embedding = nn.Embedding(
-                self.max_len + 1, self.d_model, padding_idx=PAD_ID)
+            if self.use_pos:
+                #  self.pos_embedding = PositionEmbedding(self.d_model, config.max_len)
+                self.pos_embedding = nn.Embedding(
+                    self.max_len + 1, self.d_model, padding_idx=PAD_ID)
+
+            self.from_other = False
+        else:
+            self.from_other = True
 
         self.dropout = nn.Dropout(p=config.dropout)
 
@@ -64,15 +69,16 @@ class BERT(nn.Module):
         ])
 
     def forward(self, inputs, inputs_pos):
-        # attention masking for padded token
+        # attention masking for padded 
         # torch.ByteTensor([batch_size, 1, seq_len, seq_len)
         mask = (inputs > 0).unsqueeze(1).repeat(1, inputs.size(1), 1).unsqueeze(1)
 
-        if self.use_pos:
-            # embedding the indexed sequence to sequence of vectors
-            outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
-        else:
-            outputs = self.embedding(inputs)
+        if not self.from_other:
+            if self.use_pos:
+                # embedding the indexed sequence to sequence of vectors
+                outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
+            else:
+                outputs = self.embedding(inputs)
 
         # running over multiple transformer blocks
         attns_list = list()

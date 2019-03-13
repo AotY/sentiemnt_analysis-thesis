@@ -91,20 +91,12 @@ class SAModel(nn.Module):
         elif self.config.model_type.startswith('transformer'):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
-            outputs, attns = self.encoder(
-                inputs.transpose(0, 1),
-                inputs_pos.transpose(0, 1),
-                lengths
-            )
+            outputs, attns = self.encoder(inputs.transpose(0, 1), inputs_pos.transpose(0, 1))
         #  elif self.config.model_type.find('bert') != -1:
         elif self.config.model_type.startswith('bert'):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
-            outputs, attns = self.encoder(
-                inputs.transpose(0, 1),
-                inputs_pos.transpose(0, 1),
-                lengths
-            )
+            outputs, attns = self.encoder(inputs.transpose(0, 1), inputs_pos.transpose(0, 1), lengths)
         else:
             raise ValueError('%s is invalid.' % self.config.model_type)
 

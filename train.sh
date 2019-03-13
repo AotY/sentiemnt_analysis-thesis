@@ -23,20 +23,20 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type cnn \
+    --model_type bert_rnn \
+    --rnn_type GRU \
     --n_classes 2 \
-    --rnn_type LSTM \
     --embedding_size 128 \
-    --hidden_size 128 \
+    --hidden_size 256 \
     --num_layers 1 \
+    --bidirectional \
     --t_num_layers 1 \
     --k_size 32 \
     --v_size 32 \
-    --inner_hidden_size 256 \
     --dense_size 128 \
+    --inner_hidden_size 256 \
     --regression_dense_size 256 \
-    --num_heads 6 \
-    --bidirectional \
+    --num_heads 4 \
     --in_channels 1 \
     --out_channels 128 \
     --kernel_heights 3 4 2 \
@@ -61,14 +61,13 @@ python train.py \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 5.0 \
-    #--use_pos \
+    --use_pos \
     #--use_pretrained_embedding \
     #--pre_trained_wv data/word2vec.vocab.npy \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \
-    # --n_warmup_steps 4000 \
-    #--checkpoint ./models/classification.accuracy_93.595.pth \
+    # --n_warmup_steps 4000 \ #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \
     #--text 医生医术很高超，还有态度很棒！
     #--text 太差了，态度差，排队慢。

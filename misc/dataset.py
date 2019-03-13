@@ -11,7 +11,7 @@ import torch.utils.data as data
 from tqdm import tqdm
 import numpy as np
 
-from misc.vocab import PAD_ID
+from misc.vocab import PAD_ID, EOS_ID
 from misc.sampler.imbalanced_dataset_sampler import ImbalancedDatasetSampler
 
 
@@ -141,11 +141,11 @@ class MyCollate:
         inputs_pos = list()
 
         for ids, label in batch_datas:
-            ids = ids[-min(max_len, len(ids)):]
-            lengths.append(len(ids))
+            ids = ids[-min(max_len-1, len(ids)):]
+            lengths.append(len(ids) + 1)
 
             # pad
-            ids = ids + [PAD_ID] * (max_len - len(ids))
+            ids = ids + [EOS_ID] + [PAD_ID] * (max_len - len(ids))
             inputs.append(ids)
 
             pos = [pos_i + 1 if w_i !=

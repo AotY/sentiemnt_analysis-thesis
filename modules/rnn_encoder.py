@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from modules.utils import rnn_factory, rnn_init
 from modules.cnn_encoder import CNNEncoder
+from modules.reduce_state import ReduceState
+from misc.vocab import PAD_ID
 
 
 class RNNEncoder(nn.Module):
@@ -45,15 +47,20 @@ class RNNEncoder(nn.Module):
 
         # rnn
         self.rnn = rnn_factory(
-            rnn_type=config.rnn_type,
+            rnn_type=self.rnn_type,
             input_size=config.embedding_size,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             bidirectional=config.bidirectional,
-            dropout=0.1 if self.num_layers > 1 else 0
+            dropout=config.dropout if self.num_layers > 1 else 0
         )
 
-        rnn_init(config.rnn_type, self.rnn)
+        rnn_init(self.rnn_type, self.rnn)
+
+        self.reduce_state = ReduceState(self.rnn_type)
+
+        if self.model_type == 'rnn_bert':
+            self.bert = self.bert = BERT(config, None)
 
         if not self.from_bert:
             if self.problem == 'classification':
@@ -69,7 +76,7 @@ class RNNEncoder(nn.Module):
                 # self.linear_regression_final = nn.Linear(config.regression_dense_size, 1)
                 self.linear_regression_final = nn.Linear(self.hidden_size * self.bidirection_num, 1)
 
-    def forward(self, inputs, lengths=None, hidden_state=None):
+    def forward(self, inputs, lengths=None, hidden_state=None, inputs_pos=None):
         '''
         params:
             inputs: [seq_len, batch_size]  LongTensor
@@ -119,8 +126,17 @@ class RNNEncoder(nn.Module):
         elif self.model_type == 'rnn_max':
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type = 'rnn_bert':
+            # [batch_size, max_len, hidden_size]
+            outputs = outputs.permute(1, 0, 2)
+            outputs = self.bert(outputs)
         else:
-            outputs = outputs[-1]
+            # outputs = outputs[-1]
+            hidden_state = self.reduce_state(hidden_state)
+            if self.rnn_type == 'LSTM':
+                hidden_state = hidden_state[0]
+            # if hidden_state.size(0) > 1:
+            outputs = hidden_state[-1]
 
         if not self.from_bert:
             if self.problem == 'classification':

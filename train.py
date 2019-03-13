@@ -199,7 +199,7 @@ else:
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        factor=0.3,
+        factor=0.1,
         min_lr=1e-08,
         patience=args.lr_patience,
         verbose=True
