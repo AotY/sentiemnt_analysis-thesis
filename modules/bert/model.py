@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .bert import BERT
+from .utils.layer_norm import LayerNorm
 
 from modules.rnn_encoder import RNNEncoder
 from modules.cnn_encoder import CNNEncoder
@@ -43,6 +44,9 @@ class BERTCM(nn.Module):
         elif self.model_type.find('bert_cnn') != -1:
             self.cnn = CNNEncoder(config)
             self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
+        elif self.model_type == 'bert_sum':
+            self.norm = LayerNorm(config.embedding_size)
+            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
             self.max_pool1d1 = nn.MaxPool1d(3) # 15
@@ -62,6 +66,10 @@ class BERTCM(nn.Module):
 
         if self.model_type == 'bert':
             outputs = outputs[:, 0]
+        elif self.model_type == 'bert_sum':
+            outputs = outputs.transpose(1, 2)
+            outputs = outputs.sum(dim=2)
+            outputs = self.norm(outputs)
         elif self.model_type == 'bert_max':
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
