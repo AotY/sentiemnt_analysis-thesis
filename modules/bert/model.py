@@ -44,12 +44,13 @@ class BERTCM(nn.Module):
             self.cnn = CNNEncoder(config)
             self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
         elif self.model_type == 'bert_conv1d':
-            self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 3) # 48
-            self.max_pool1d1 = nn.MaxPool1d(3) # 16
-            self.conv1d2 = nn.Conv1d(config.embedding_size, config.embedding_size, 2) # 15
-            self.max_pool1d2 = nn.MaxPool1d(3) # 5
-            self.conv1d3 = nn.Conv1d(config.embedding_size, config.embedding_size, 3) # 3
+            self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 5) # 46
+            self.max_pool1d1 = nn.MaxPool1d(2) # 23
+            self.conv1d2 = nn.Conv1d(config.embedding_size, config.embedding_size, 3) # 21
+            self.max_pool1d2 = nn.MaxPool1d(3) # 7
+            self.conv1d3 = nn.Conv1d(config.embedding_size, config.embedding_size, 4) # 3
             self.max_pool1d3 = nn.MaxPool1d(3) # 1
+            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
@@ -93,9 +94,11 @@ class BERTCM(nn.Module):
             # [batch_size, embedding_size]
             outputs, _ = self.cnn(outputs)
         elif self.model_type == 'bert_conv1d':
+            outputs = outputs.transpose(1, 2)
             outputs = self.max_pool1d1(F.relu(self.conv1d1(outputs)))
             outputs = self.max_pool1d2(F.relu(self.conv1d2(outputs)))
             outputs = self.max_pool1d3(F.relu(self.conv1d3(outputs)))
+            # print('outputs: ', outputs.shape)
             outputs = outputs.view(outputs.size(0), -1)
 
         if self.problem == 'classification':

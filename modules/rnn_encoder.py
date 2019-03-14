@@ -54,7 +54,8 @@ class RNNEncoder(nn.Module):
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             bidirectional=config.bidirectional,
-            dropout=config.dropout if self.num_layers > 1 else 0
+            dropout=0.5 if self.num_layers > 1 else 0
+            # dropout=config.dropout if self.num_layers > 1 else 0
         )
 
         rnn_init(self.rnn_type, self.rnn)

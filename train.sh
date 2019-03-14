@@ -23,12 +23,12 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_avg \
+    --model_type rnn \
     --rnn_type GRU \
     --n_classes 2 \
     --embedding_size 128 \
-    --hidden_size 128 \
-    --num_layers 1 \
+    --hidden_size 256 \
+    --num_layers 2 \
     --bidirectional \
     --t_num_layers 1 \
     --k_size 32 \
@@ -52,7 +52,7 @@ python train.py \
     --epochs 20 \
     --start_epoch 1 \
     --lr_patience 3 \
-    --es_patience 7 \
+    --es_patience 8 \
     --device cuda \
     --seed 23 \
     --save_mode all \

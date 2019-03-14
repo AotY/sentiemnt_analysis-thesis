@@ -145,7 +145,7 @@ class MyCollate:
             lengths.append(len(ids) + 1)
 
             # pad
-            ids = ids + [EOS_ID] + [PAD_ID] * (max_len - len(ids))
+            ids = ids + [EOS_ID] + [PAD_ID] * (max_len - 1 - len(ids))
             inputs.append(ids)
 
             pos = [pos_i + 1 if w_i !=
