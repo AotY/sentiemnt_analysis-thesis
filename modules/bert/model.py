@@ -51,7 +51,7 @@ class BERTCM(nn.Module):
             self.conv1d3 = nn.Conv1d(config.embedding_size, config.embedding_size, 4) # 3
             self.max_pool1d3 = nn.MaxPool1d(3) # 1
             self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
-            self.dropout_dense = nn.Dropout(0.5)
+            # self.dropout_dense = nn.Dropout(0.5)
             self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
@@ -103,7 +103,7 @@ class BERTCM(nn.Module):
             # print('outputs: ', outputs.shape)
             outputs = outputs.view(outputs.size(0), -1)
             outputs = self.linear_dense(outputs)
-            outputs = self.dropout_dense(outputs)
+            # outputs = self.dropout_dense(outputs)
 
         if self.problem == 'classification':
             # [batch_size, ] -> [batch_size, n_classes]
