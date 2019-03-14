@@ -34,6 +34,7 @@ class BERTCM(nn.Module):
 
         self.model_type = config.model_type
 
+        self.norm = LayerNorm(config.embedding_size)
         if self.model_type in ['bert_max_kernel', 'bert_avg_kernel']:
             self.linear_final = nn.Linear(config.embedding_size * 5, config.n_classes)
         elif self.model_type == 'bert_max_min':
@@ -45,7 +46,9 @@ class BERTCM(nn.Module):
             self.cnn = CNNEncoder(config)
             self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
         elif self.model_type == 'bert_sum':
-            self.norm = LayerNorm(config.embedding_size)
+            # self.norm = LayerNorm(config.embedding_size)
+            # self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
+            # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
@@ -54,9 +57,11 @@ class BERTCM(nn.Module):
             self.max_pool1d2 = nn.MaxPool1d(2) # 6
             self.conv1d3 = nn.Conv1d(config.embedding_size, config.embedding_size, 4) # 3
             self.max_pool1d3 = nn.MaxPool1d(3) # 1
-            self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
+            # self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
             # self.dropout_dense = nn.Dropout(0.5)
-            self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
+            # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
+            # self.norm = LayerNorm(config.embedding_size)
+            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
@@ -70,9 +75,11 @@ class BERTCM(nn.Module):
             outputs = outputs.transpose(1, 2)
             outputs = outputs.sum(dim=2)
             outputs = self.norm(outputs)
+            # outputs = self.linear_dense(outputs)
         elif self.model_type == 'bert_max':
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            outputs = self.norm(outputs)
         elif self.model_type == 'bert_min':
             outputs = outputs.transpose(1, 2)
             outputs = outputs.min(dim=2)[0]
@@ -89,7 +96,7 @@ class BERTCM(nn.Module):
         elif self.model_type == 'bert_avg':
             outputs = outputs.transpose(1, 2)
             outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
-            # outputs = outputs.mean(dim=1)
+            outputs = self.norm(outputs)
         elif self.model_type == 'bert_avg_kernel':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.transpose(1, 2)
@@ -110,7 +117,8 @@ class BERTCM(nn.Module):
             outputs = self.max_pool1d3(F.relu(self.conv1d3(outputs)))
             # print('outputs: ', outputs.shape)
             outputs = outputs.view(outputs.size(0), -1)
-            outputs = self.linear_dense(outputs)
+            outputs = self.norm(outputs)
+            # outputs = self.linear_dense(outputs)
             # outputs = self.dropout_dense(outputs)
 
         if self.problem == 'classification':

@@ -114,12 +114,14 @@ class RNNEncoder(nn.Module):
         if self.model_type.find('attention') != -1:
             # [batch_size, max_len, hidden_size]
             outputs = outputs.permute(1, 0, 2)
-            final_state = hidden_state
+            hidden_state = self.reduce_state(hidden_state)
             if self.rnn_type == 'LSTM':
-                final_state = hidden_state[0]
-                final_state = final_state.view(
-                    self.num_layers, final_state.size(1), -1)
-                final_state = torch.sum(final_state, dim=0)
+                hidden_state = hidden_state[0]
+            # if self.rnn_type == 'LSTM':
+                # final_state = hidden_state[0]
+                # final_state = final_state.view(self.num_layers, final_state.size(1), -1)
+                # final_state = torch.sum(final_state, dim=0)
+            final_state = hidden_state[-1]
             outputs, attns = self.attention_net(outputs, final_state)
         elif self.model_type == 'rnn_cnn':
             # [batch_size, max_len, hidden_size]
@@ -157,20 +159,17 @@ class RNNEncoder(nn.Module):
 
         return outputs, attns
 
-    def attention_net(self, lstm_outputs, final_state):
+    def attention_net(self, outputs, final_state):
         """
         Now we will incorporate Attention mechanism in our LSTM model. In this new model, we will use attention to compute soft alignment score corresponding
         between each of the hidden_state and the last hidden_state of the LSTM. We will be using torch.bmm for the batch matrix multiplication.
-
         Arguments
         ---------
-
-        lstm_outputs : Final output of the LSTM which contains hidden layer outputs for each sequence.
+        outputs : Final output of the LSTM which contains hidden layer outputs for each sequence.
         final_state : Final time-step hidden state (h_n) of the LSTM
-
         ---------
 
-        Returns : It performs attention mechanism by first computing weights for each of the sequence present in lstm_outputs and and then finally computing the
+        Returns : It performs attention mechanism by first computing weights for each of the sequence present in outputs and and then finally computing the
                           new hidden state.
 
         Tensor Size :
@@ -185,13 +184,12 @@ class RNNEncoder(nn.Module):
         # print('hidden: ', hidden.shape)
 
         # [batch_size, max_len, 1]
-        attn_weights = torch.bmm(lstm_outputs, hidden)
+        attn_weights = torch.bmm(outputs, hidden)
 
         # [batch_size, max_len, 1]
         soft_attn_weights = F.softmax(attn_weights, 1)
 
         # [batch_size, hidden_size]
-        new_hidden_state = torch.bmm(lstm_outputs.transpose(
-            1, 2), soft_attn_weights).squeeze(2)
+        new_hidden_state = torch.bmm(outputs.transpose(1, 2), soft_attn_weights).squeeze(2)
 
         return new_hidden_state, soft_attn_weights

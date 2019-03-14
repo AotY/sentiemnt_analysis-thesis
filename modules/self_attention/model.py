@@ -68,7 +68,7 @@ class StructuredSelfAttention(nn.Module):
             hidden_size=self.hidden_size,
             num_layers=config.num_layers,
             bidirectional=config.bidirectional,
-            dropout=0.2 if config.num_layers > 1 else 0
+            dropout=0.5 if config.num_layers > 1 else 0
         )
 
         rnn_init(config.rnn_type, self.rnn)
