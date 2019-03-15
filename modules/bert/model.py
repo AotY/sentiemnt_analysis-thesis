@@ -50,6 +50,9 @@ class BERTCM(nn.Module):
             # self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+        elif self.model_type == 'bert_sample':
+            self.sample_weight = torch.ones(config.max_len) / config.max_len
+            self.linear_final = nn.Linear(config.embedding_size * 5, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
             self.max_pool1d1 = nn.MaxPool1d(3) # 15
@@ -67,7 +70,7 @@ class BERTCM(nn.Module):
 
     def forward(self, inputs, inputs_pos, lengths=None):
         # [batch_size, max_len, embedding_size], [] list
-        outputs, attns_list = self.bert(inputs, inputs_pos)
+        outputs, attns_list, embedded = self.bert(inputs, inputs_pos)
 
         if self.model_type == 'bert':
             outputs = outputs[:, 0]
@@ -96,11 +99,25 @@ class BERTCM(nn.Module):
         elif self.model_type == 'bert_avg':
             outputs = outputs.transpose(1, 2)
             outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
-            outputs = self.norm(outputs)
+            #  outputs = self.norm(outputs)
         elif self.model_type == 'bert_avg_kernel':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.transpose(1, 2)
             outputs = F.avg_pool1d(outputs, kernel_size=10)
+            outputs = outputs.view(outputs.size(0), -1)
+        elif self.model_type == 'bert_embedding_avg':
+            outputs = outputs + embedded
+            outputs = self.norm(outputs)
+            outputs = outputs.transpose(1, 2)
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'bert_embedding_max':
+            outputs = outputs + embedded
+            outputs = self.norm(outputs)
+            outputs = outputs.transpose(1, 2)
+            outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'bert_sample':
+            random_idxes = torch.multinomial(self.sample_weight, 5)
+            outputs = outputs.index_select(1, random_idxes)
             outputs = outputs.view(outputs.size(0), -1)
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]

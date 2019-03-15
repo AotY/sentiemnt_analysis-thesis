@@ -72,21 +72,22 @@ class BERT(nn.Module):
         if not self.from_other:
             if self.use_pos:
                 # embedding the indexed sequence to sequence of vectors
-                outputs = self.embedding(inputs) + self.pos_embedding(inputs_pos)
+                embedded = self.embedding(inputs) + self.pos_embedding(inputs_pos)
             else:
-                outputs = self.embedding(inputs)
+                embedded = self.embedding(inputs)
             # torch.ByteTensor([batch_size, 1, max_len, max_len)
             mask = (inputs > 0).unsqueeze(1).repeat(1, inputs.size(1), 1).unsqueeze(1)
         else:
-            outputs = inputs
+            embedded = inputs
             mask = None
 
         # running over multiple transformer blocks
         attns_list = list()
+        outputs = embedded
         for transformer in self.transformer_blocks:
             outputs, attns = transformer.forward(outputs, mask)
             attns_list.append(attns)
 
         outputs = self.dropout(outputs)
 
-        return outputs, attns_list
+        return outputs, attns_list, embedded
