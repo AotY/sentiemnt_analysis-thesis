@@ -8,14 +8,16 @@
 Tokenizer
 """
 #  import re
-import jieba
+#  import jieba
+import pkuseg
 
 
 class Tokenizer:
     def __init__(self, userdict_path=None):
         # load user dict
-        if userdict_path is not None and userdict_path != '':
-            jieba.load_userdict(userdict_path)
+        #  if userdict_path is not None and userdict_path != '':
+            #  jieba.load_userdict(userdict_path)
+        pass
 
     def tokenize(self, text):
         if isinstance(text, list):
@@ -40,12 +42,14 @@ class Tokenizer:
         text = text.replace('”', ' ” ')
 
 
-        tokens = list(jieba.cut(text))
+        #  tokens = list(jieba.cut(text))
+        tokens = seg.cut(text)
         #  tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
 
         if len(tokens) == 0:
             return []
 
+        """
         new_tokens = list()
         for token in tokens:
             try:
@@ -56,3 +60,5 @@ class Tokenizer:
                 continue
 
         return new_tokens
+        """
+        return tokens
