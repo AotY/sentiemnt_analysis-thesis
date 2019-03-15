@@ -1,0 +1,10 @@
+src/compute-accuracy
+src/distance
+src/word-analogy
+src/word2phrase
+src/word2vec
+
+bin/
+data/text8
+data/text8-vector.bin
+data/text8.zip
