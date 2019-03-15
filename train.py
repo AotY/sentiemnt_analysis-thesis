@@ -10,6 +10,7 @@ warnings.filterwarnings('ignore')
 import os
 import sys
 import time
+import random
 import argparse
 
 import torch
@@ -20,7 +21,7 @@ from tqdm import tqdm
 #  import numpy as np
 import pandas as pd
 
-from sklearn.metrics import accuracy_score
+#  from sklearn.metrics import accuracy_score
 # from sklearn.metrics import recall_score
 # from sklearn.metrics import f1_score
 
@@ -116,7 +117,10 @@ args = parser.parse_args()
 
 print(' '.join(sys.argv))
 
-torch.random.manual_seed(args.seed)
+random.seed(args.seed)
+torch.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
+#  torch.random.manual_seed(args.seed)
 device = torch.device(args.device)
 # print('device: {}'.format(device))
 
@@ -627,7 +631,7 @@ def cal_performance(pred, gold):
         # [batch_size]
         gold = gold.contiguous().view(-1).tolist()
 
-        accuracy = accuracy_score(gold, pred)
+        #  accuracy = accuracy_score(gold, pred)
 
         """
         def intersection(list1, list2):

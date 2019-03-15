@@ -18,6 +18,13 @@ data/*.txt
 data/*.dist
 data/*.bin
 
+### embedding
+embedding/word2vec/bin/*.bin
+embedding/word2vec/data/*.bin
+embedding/*.bin
+
+
+
 # data/*.dist
 
 ### log
