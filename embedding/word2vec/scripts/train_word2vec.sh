@@ -14,17 +14,17 @@ TEXT_DATA=$DATA_DIR/merged_data.txt
 # VECTOR_DATA=$DATA_DIR/merged_data.vec.bin
 VECTOR_DATA=$DATA_DIR/merged_data.vec.txt
 
-pushd ${SRC_DIR} && make; popd
+#pushd ${SRC_DIR} && make; popd
 
-if [ ! -e $VECTOR_DATA ]; then
-    echo -----------------------------------------------------------------------------------------------------
-    echo -- Training vectors...
-    time $BIN_DIR/word2vec -train $TEXT_DATA -output $VECTOR_DATA -cbow 1 -size 128 -window 5 -negative 5 -hs 0 -sample 1e-3 -threads 12 -binary 0
+#if [ ! -e $VECTOR_DATA ]; then
+    #echo -----------------------------------------------------------------------------------------------------
+    #echo -- Training vectors...
+    #time $BIN_DIR/word2vec -train $TEXT_DATA -output $VECTOR_DATA -cbow 1 -size 128 -window 5 -negative 5 -hs 0 -sample 1e-3 -threads 12 -binary 0
 
-fi
+#fi
 
-echo -----------------------------------------------------------------------------------------------------
-echo -- distance...
+#echo -----------------------------------------------------------------------------------------------------
+#echo -- distance...
 
-$BIN_DIR/distance $DATA_DIR/$VECTOR_DATA
+$BIN_DIR/distance $VECTOR_DATA
 

@@ -14,7 +14,7 @@ import os
 import argparse
 import pandas as pd
 from tqdm import tqdm
-from misc.tokenizer import Tokenizer
+from tokenizer import Tokenizer
 
 parser = argparse.ArgumentParser()
 
@@ -42,6 +42,7 @@ data_sources = [
 
 save_file = open(args.save_path, 'w', encoding='utf-8')
 for source in data_sources:
+    print('source: %s' % source)
     if not source.startswith('./'):
         data_path = os.path.join(args.data_dir, source)
     else:
@@ -56,7 +57,7 @@ for source in data_sources:
         texts = df['comment']
     elif source.startswith('yf_amazon'):
         texts = df['comment']
-    elif source.startswith('raw.question.txt'):
+    elif source.endswith('raw.question.txt'):
         texts = list()
         print('Loading raw.question.txt...')
         with open(data_path, 'r') as f:
@@ -71,7 +72,7 @@ for source in data_sources:
                 texts.append(query)
                 texts.append(response)
         pass
-    elif source.startswith('label.cleaned.txt'):
+    elif source.endswith('label.cleaned.txt'):
         texts = list()
         print('Loading label.cleaned.txt...')
         with open(data_path, 'r') as f:
@@ -90,7 +91,6 @@ for source in data_sources:
 
     else:
         texts = df['review']
-        pass
 
     print('Save text...')
     #  for text in tqdm(texts):
