@@ -17,7 +17,7 @@ class Tokenizer:
         # load user dict
         #  if userdict_path is not None and userdict_path != '':
             #  jieba.load_userdict(userdict_path)
-        pass
+        self.seg = pkuseg.pkuseg()
 
     def tokenize(self, text):
         if isinstance(text, list):
@@ -43,7 +43,7 @@ class Tokenizer:
 
 
         #  tokens = list(jieba.cut(text))
-        tokens = seg.cut(text)
+        tokens = self.seg.cut(text)
         #  tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
 
         if len(tokens) == 0:

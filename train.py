@@ -118,7 +118,7 @@ args = parser.parse_args()
 print(' '.join(sys.argv))
 
 random.seed(args.seed)
-torch.manual_seed(SEED)
+torch.manual_seed(args.seed)
 torch.backends.cudnn.deterministic = True
 #  torch.random.manual_seed(args.seed)
 device = torch.device(args.device)

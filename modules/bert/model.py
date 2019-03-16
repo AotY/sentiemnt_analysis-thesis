@@ -52,7 +52,11 @@ class BERTCM(nn.Module):
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_sample':
             self.sample_weight = torch.ones(config.max_len) / config.max_len
-            self.linear_final = nn.Linear(config.embedding_size * 5, config.n_classes)
+            self.sample_num = 6
+            self.sample_weight[:20] = 0.1
+            self.sample_weight[:10] = 0.2
+            self.sample_weight[:5] = 0.3
+            self.linear_final = nn.Linear(config.embedding_size * self.sample_num, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
             self.max_pool1d1 = nn.MaxPool1d(3) # 15
@@ -116,7 +120,7 @@ class BERTCM(nn.Module):
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
         elif self.model_type == 'bert_sample':
-            random_idxes = torch.multinomial(self.sample_weight, 5)
+            random_idxes = torch.multinomial(self.sample_weight, self.sample_num).to(outputs.device)
             outputs = outputs.index_select(1, random_idxes)
             outputs = outputs.view(outputs.size(0), -1)
         elif self.model_type.find('bert_rnn') != -1:
