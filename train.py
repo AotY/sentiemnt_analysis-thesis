@@ -18,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tqdm import tqdm
-#  import numpy as np
+import numpy as np
 import pandas as pd
 
 #  from sklearn.metrics import accuracy_score
@@ -137,7 +137,8 @@ datas = load_data(args, vocab)
 train_data, valid_data, test_data, args = build_dataloader(args, datas)
 args.classes_weight = args.classes_weight.to(device)
 print('train classes_count: {}'.format(args.classes_count))
-classes_ratio = [count / sum(args.classes_count) * 100 for count in args.classes_count]
+classes_ratio = [count / sum(args.classes_count)
+                 * 100 for count in args.classes_count]
 print('train classes_raio: {}'.format(classes_ratio))
 if not args.sampler:
     print('cross_entropy classes_weight: {}'.format(args.classes_weight))
@@ -177,13 +178,16 @@ scheduler = None
 if args.model_type.find('bert') != -1 or args.model_type.find('transformer') != -1:
     # TODO
     print('len(train_data): ', len(train_data))
-    t_total = int(len(train_data) / args.gradient_accumulation_steps) * args.epochs
+    t_total = int(len(train_data) /
+                  args.gradient_accumulation_steps) * args.epochs
     print('t_total: ', t_total)
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'norm.bias', 'norm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': [p for n, p in param_optimizer if not any(
+            nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in param_optimizer if any(
+            nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer = BertAdam(
         optimizer_grouped_parameters,
@@ -391,7 +395,8 @@ def train(epoch):
             desc=' (Training: %d) ' % epoch, leave=False)):
         # prepare data
         # [max_len, batch_size]
-        inputs, lengths, labels, inputs_pos = map(lambda x: x.to(device), batch)
+        inputs, lengths, labels, inputs_pos = map(
+            lambda x: x.to(device), batch)
 
         outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos)
 
@@ -401,7 +406,8 @@ def train(epoch):
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
-                loss, report_df = cal_performance(outputs.double() + 1e-8, labels)
+                loss, report_df = cal_performance(
+                    outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
                 attnsT = attns.transpose(1, 2)
@@ -683,7 +689,8 @@ def cal_loss(pred, gold, smoothing):
             n_classes = pred.size(1)
 
             one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
-            one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_classes - 1)
+            one_hot = one_hot * (1 - eps) + (1 - one_hot) * \
+                eps / (n_classes - 1)
 
             log_prb = F.log_softmax(pred, dim=1)
 
@@ -700,15 +707,18 @@ def cal_loss(pred, gold, smoothing):
                 # print('pred: ', pred.shape)
                 # print('gold: ', gold.shape)
                 if args.n_classes > 2:
-                    loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='mean')
+                    loss = F.cross_entropy(
+                        pred, gold, weight=args.classes_weight, reduction='mean')
                 else:
-                    loss = F.binary_cross_entropy_with_logits(pred, gold, weight=args.classes_weight, reduction='mean')
+                    loss = F.binary_cross_entropy_with_logits(
+                        pred, gold, weight=args.classes_weight, reduction='mean')
             else:
                 #  loss = F.cross_entropy(pred, gold, reduction='sum')
                 if args.n_classes > 2:
                     loss = F.cross_entropy(pred, gold, reduction='mean')
                 else:
-                    loss = F.binary_cross_entropy_with_logits(pred, gold, reduction='mean')
+                    loss = F.binary_cross_entropy_with_logits(
+                        pred, gold, reduction='mean')
     else:
         # pred: [batch_size, 1], gold: [batch_size, 1]
         gold = gold.float()
