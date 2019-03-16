@@ -323,7 +323,8 @@ void LearnVocabFromTrainFile() {
             a = AddWordToVocab(word);
             vocab[a].cn = 1;
         } else vocab[i].cn++;
-        if (vocab_size > vocab_hash_size * 0.7) ReduceVocab();
+        if (vocab_size > vocab_hash_size * 0.7) 
+            ReduceVocab();
     }
     SortVocab();
     if (debug_mode > 0) {
@@ -698,6 +699,7 @@ void TrainModel() {
         ReadVocab();
     else
         LearnVocabFromTrainFile();
+
     if (save_vocab_file[0] != 0)
         SaveVocab();
     if (output_file[0] == 0)
