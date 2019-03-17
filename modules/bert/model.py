@@ -69,6 +69,8 @@ class BERTCM(nn.Module):
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             # self.norm = LayerNorm(config.embedding_size)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+        if self.model_type in ['bert_max_embedding', 'bert_avg_embedding']:
+            self.linear_final = nn.Linear(config.max_len, config.n_classes)
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
@@ -109,12 +111,16 @@ class BERTCM(nn.Module):
             outputs = outputs.transpose(1, 2)
             outputs = F.avg_pool1d(outputs, kernel_size=10)
             outputs = outputs.view(outputs.size(0), -1)
-        elif self.model_type == 'bert_embedding_avg':
+        elif self.model_type == 'bert_avg_embedding':
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'bert_max_embedding':
+            outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'bert_residual_embedding_avg':
             outputs = outputs + embedded
             outputs = self.norm(outputs)
             outputs = outputs.transpose(1, 2)
             outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
-        elif self.model_type == 'bert_embedding_max':
+        elif self.model_type == 'bert_residual_embedding_max':
             outputs = outputs + embedded
             outputs = self.norm(outputs)
             outputs = outputs.transpose(1, 2)

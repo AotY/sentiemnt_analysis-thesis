@@ -30,6 +30,7 @@ class RNNEncoder(nn.Module):
 
         self.model_type = config.model_type
         self.rnn_type = config.rnn_type
+        self.max_len = config.max_len
 
         # embedding
         if embedding is not None:
@@ -71,6 +72,9 @@ class RNNEncoder(nn.Module):
                     self.cnn = CNNEncoder(config)
                     self.linear_final = nn.Linear(
                         len(config.kernel_heights) * config.out_channels, config.n_classes)
+                elif self.model_type in ['rnn_avg_hidden', 'rnn_max_hidden']:
+                    self.linear_final = nn.Linear(
+                        self.max_len, self.n_classes)
                 else:
                     self.linear_final = nn.Linear(
                         self.hidden_size * self.bidirection_num, self.n_classes)
@@ -128,11 +132,21 @@ class RNNEncoder(nn.Module):
             outputs = outputs.permute(1, 0, 2)
             outputs = self.cnn(outputs)
         elif self.model_type == 'rnn_avg':
-            outputs = outputs.transpose(1, 2)
+            # [batch_size, hidden_size, max_len]
+            outputs = outputs.permute(1, 2, 0)
             outputs = F.avg_pool1d(
                 outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'rnn_avg_hidden':
+            # [batch_size, max_len, hidden_size]
+            outputs = outputs.permute(1, 0, 2)
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
         elif self.model_type == 'rnn_max':
-            outputs = outputs.transpose(1, 2)
+            # [batch_size, hidden_size, max_len]
+            outputs = outputs.permute(1, 2, 0)
+            outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+        elif self.model_type == 'rnn_max_hidden':
+            # [batch_size, max_len, hidden_size]
+            outputs = outputs.permute(1, 0, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
         elif self.model_type == 'rnn_bert':
             # [batch_size, max_len, hidden_size]

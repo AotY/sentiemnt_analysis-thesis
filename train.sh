@@ -23,7 +23,7 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_sample \
+    --model_type bert_max_embedding \
     --rnn_type GRU \
     --n_classes 2 \
     --embedding_size 300 \
