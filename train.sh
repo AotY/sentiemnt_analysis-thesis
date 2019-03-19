@@ -23,7 +23,7 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_max_embedding \
+    --model_type rnn_avg \
     --rnn_type GRU \
     --n_classes 2 \
     --embedding_size 300 \
@@ -61,7 +61,7 @@ python train.py \
     --use_penalization \
     --penalization_coeff 1.0 \
     --max_grad_norm 5.0 \
-    #--use_pos \
+    --use_pos \
     #--use_pretrained_embedding \
     #--pre_trained_wv data/word2vec.vocab.npy \
     #--sampler \

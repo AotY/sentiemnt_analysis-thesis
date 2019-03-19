@@ -706,19 +706,19 @@ def cal_loss(pred, gold, smoothing):
                 #  loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='sum')
                 # print('pred: ', pred.shape)
                 # print('gold: ', gold.shape)
-                if args.n_classes > 2:
+                if args.n_classes >= 2:
                     loss = F.cross_entropy(
                         pred, gold, weight=args.classes_weight, reduction='mean')
                 else:
                     loss = F.binary_cross_entropy_with_logits(
-                        pred, gold, weight=args.classes_weight, reduction='mean')
+                        pred.view(-1), gold.double(), reduction='mean')
             else:
                 #  loss = F.cross_entropy(pred, gold, reduction='sum')
-                if args.n_classes > 2:
+                if args.n_classes >= 2:
                     loss = F.cross_entropy(pred, gold, reduction='mean')
                 else:
                     loss = F.binary_cross_entropy_with_logits(
-                        pred, gold, reduction='mean')
+                        pred.view(-1), gold.double(), reduction='mean')
     else:
         # pred: [batch_size, 1], gold: [batch_size, 1]
         gold = gold.float()
