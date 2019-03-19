@@ -122,6 +122,7 @@ torch.manual_seed(args.seed)
 torch.backends.cudnn.deterministic = True
 #  torch.random.manual_seed(args.seed)
 device = torch.device(args.device)
+args.device = device
 # print('device: {}'.format(device))
 
 # load vocab

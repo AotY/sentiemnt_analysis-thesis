@@ -29,12 +29,10 @@ class SAModel(nn.Module):
 
     def __init__(self,
                  config,
-                 device='cuda',
                  pretrained_embedding=None):
         super(SAModel, self).__init__()
 
         self.config = config
-        self.device = device
         # print('config: {}'.format(config))
 
         embedding = load_embedding(config, pretrained_embedding)
