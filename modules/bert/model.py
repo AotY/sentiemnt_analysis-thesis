@@ -10,6 +10,7 @@ Bert classification model
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from .bert import BERT
 from .utils.layer_norm import LayerNorm
 
@@ -50,6 +51,14 @@ class BERTCM(nn.Module):
             # self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+        elif self.model_type == 'bert_weight':
+            self.weight = nn.Parameter(torch.zeros(config.max_len, 1, device=config.device))
+            self.weight.data.fill_(0)
+            # self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
+        elif self.model_type == 'bert_weight_embedding':
+            self.weight = nn.Parameter(torch.zeros(config.embedding_size, 1, device=config.device))
+            # self.weight.data.fill_(0)
+            self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
         elif self.model_type == 'bert_sample':
             self.sample_weight = torch.ones(config.max_len) / config.max_len
             self.sample_num = 6
@@ -69,7 +78,8 @@ class BERTCM(nn.Module):
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             # self.norm = LayerNorm(config.embedding_size)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
-        if self.model_type in ['bert_max_embedding', 'bert_avg_embedding']:
+
+        if self.model_type in ['bert_max_embedding', 'bert_avg_embedding', 'bert_weight_embedding']:
             self.linear_final = nn.Linear(config.max_len, config.n_classes)
         else:
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
@@ -137,6 +147,15 @@ class BERTCM(nn.Module):
         elif self.model_type == 'bert_cnn':
             # [batch_size, embedding_size]
             outputs, _ = self.cnn(outputs)
+        elif self.model_type == 'bert_weight':
+            # [batch_size, embedding_size, max_len]
+            outputs = outputs.transpose(1, 2)
+            outputs = outputs @ self.weight
+            outputs = outputs.view(outputs.size(0), -1)
+        elif self.model_type == 'bert_weight_embedding':
+            # [batch_size, max_len, embedding_size]
+            outputs = outputs @ self.weight
+            outputs = outputs.view(outputs.size(0), -1)
         elif self.model_type == 'bert_conv1d':
             outputs = outputs.transpose(1, 2)
             outputs = self.max_pool1d1(F.relu(self.conv1d1(outputs)))
