@@ -30,18 +30,21 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
         line = line.rstrip()
         words = line.split()
         pinyins = list()
-        pinyin = 'none'
+        none_pinyin = 'none'
         for word in words:
             #  pinyin_list = snownlp.normal.get_pinyin(word)
             pinyin_list2 = pypinyin.pinyin(word, style=pypinyin.Style.NORMAL, heteronym=False)
             pinyin_list = [heteronyms[0] for heteronyms in pinyin_list2]
             pinyin_str = ''.join(pinyin_list)
             if pinyin_str != word:
-                pinyin = pinyin_str
-            pinyins.append(pinyin)
+                pinyins.append(pinyin_str)
+            else:
+                if len(pinyin_str) == 1: # probably it is a Punctuation
+                    pinyins.append(pinyin_str)
+                else:
+                    pinyins.append(none_pinyin)
 
         save_file.write('%s\n' % ' '.join(pinyins))
-
 
 
 save_file.close()
