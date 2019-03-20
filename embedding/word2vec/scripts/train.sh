@@ -43,7 +43,7 @@ do
 			fi
 			# ./bin/word2vec
 			vector_path=$DATA_DIR/merged_data.vec.$mt.$csm.$cea.$size.bin
-			echo "-train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -output $vector_path -save-vocab $VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads 12 -min-count 5 -model-type $mt "
+			./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -output $vector_path -save-vocab $VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads 12 -min-count 5 -model-type $mt 
 			sleep 2
 		done
 	done
