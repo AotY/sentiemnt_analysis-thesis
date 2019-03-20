@@ -734,7 +734,7 @@ void *trainModelThread(void *id) {
 		b = next_random % window;
 
 		if (cbow) {  //train the cbow architecture
-			/* cw = 0; */
+			cw = 0;
 			// in -> hidden
 			for (a = b; a < window * 2 + 1 - b; a++) {
 				if (a != window) {
@@ -752,107 +752,110 @@ void *trainModelThread(void *id) {
 
 					// joint pinyin info
 					if (model_type == 2 || model_type == 4) {
-						/* long long pinyin_idx = vocab[last_word].pinyin_idx; */
-						for (c = 0; c < layer1_size; c++)
+						for (c = 0; c < layer1_size; c++){
 							neu1[c] += pinyin_v[c + vocab[last_word].pinyin_idx * layer1_size];
+							neu1[c] /= 2;
+						}
 					}
-					/* cw ++; */
+					cw ++;
 				}
 			}
 
-			/* for (c = 0; c < dim; c++) */
-			/* neu1[c] /= cw; // 取平均 */
+			if (cw){
+				for (c = 0; c < dim; c++)
+					neu1[c] /= cw; // 取平均
 
-			if (hs) {
-				for (d = 0; d < vocab[word].codelen; d++) {
-					f = 0;
+				if (hs) {
+					for (d = 0; d < vocab[word].codelen; d++) {
+						f = 0;
 
-					l2 = vocab[word].point[d] * layer1_size;
+						l2 = vocab[word].point[d] * layer1_size;
 
-					// output: Propagate hidden -> output
-					for (c = 0; c < layer1_size; c++)
-						f += neu1[c] * syn1[c + l2];
-
-					if (f <= -MAX_EXP)
-						continue;
-					else if (f >= MAX_EXP)
-						continue;
-					else
-						f = exp_table[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
-
-					// 'g' is the gradient multiplied by the learning rate
-					g = (1 - vocab[word].code[d] - f) * alpha;
-
-					// Propagate errors output -> hidden for input update
-					for (c = 0; c < layer1_size; c++)
-						neu1e[c] += g * syn1[c + l2];
-
-					// update: Learn weights hidden -> output
-					for (c = 0; c < layer1_size; c++)
-						syn1[c + l2] += g * neu1[c];
-				}
-			}
-
-			// NEGATIVE SAMPLING
-			if (negative > 0) {
-				for (d = 0; d < negative + 1; d++) {
-					if (d == 0) {
-						target = word;
-						label = 1;
-					} else {
-						next_random = next_random * (unsigned long long)25214903917 + 11;
-						target = table[(next_random >> 16) % table_size];
-
-						if (target == 0)
-							target = next_random % (vocab_size - 1) + 1;
-						if (target == word)
-							continue;
-						label = 0;
-					}
-
-					l2 = target * layer1_size;
-					f = 0;
-
-					for (c = 0; c < layer1_size; c++)
-						f += neu1[c] * syn1neg[c + l2];
-
-					if (f > MAX_EXP)
-						g = (label - 1) * alpha;
-					else if (f < -MAX_EXP)
-						g = (label - 0) * alpha;
-					else
-						g = (label - exp_table[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * alpha;
-
-					// Propagate errors output -> hidden for input update
-					for (c = 0; c < layer1_size; c++)
-						neu1e[c] += g * syn1neg[c + l2];
-
-					// update: Learn weights hidden -> output
-					for (c = 0; c < layer1_size; c++)
-						syn1neg[c + l2] += g * neu1[c];
-				}
-			}
-
-			// hidden -> in
-			for (a = b; a < window * 2 + 1 - b; a++) {
-				if (a != window) {
-					c = sentence_pos - window + a;
-					if (c < 0 || c >= sentence_length)
-						continue;
-
-					last_word = sentence[c];
-					if (last_word == -1)
-						continue;
-
-					// update hidden -> input
-					for (c = 0; c < layer1_size; c++)
-						syn0[c + last_word * layer1_size] += neu1e[c];
-
-					// update pinyin hidden -> input
-					if (model_type == 2 || model_type == 4){
-						long long pinyin_idx = vocab[last_word].pinyin_idx;
+						// output: Propagate hidden -> output
 						for (c = 0; c < layer1_size; c++)
-							pinyin_v[c + pinyin_idx * layer1_size] += neu1e[c] * pinyin_rate;
+							f += neu1[c] * syn1[c + l2];
+
+						if (f <= -MAX_EXP)
+							continue;
+						else if (f >= MAX_EXP)
+							continue;
+						else
+							f = exp_table[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))];
+
+						// 'g' is the gradient multiplied by the learning rate
+						g = (1 - vocab[word].code[d] - f) * alpha;
+
+						// Propagate errors output -> hidden for input update
+						for (c = 0; c < layer1_size; c++)
+							neu1e[c] += g * syn1[c + l2];
+
+						// update: Learn weights hidden -> output
+						for (c = 0; c < layer1_size; c++)
+							syn1[c + l2] += g * neu1[c];
+					}
+				}
+
+				// NEGATIVE SAMPLING
+				if (negative > 0) {
+					for (d = 0; d < negative + 1; d++) {
+						if (d == 0) {
+							target = word;
+							label = 1;
+						} else {
+							next_random = next_random * (unsigned long long)25214903917 + 11;
+							target = table[(next_random >> 16) % table_size];
+
+							if (target == 0)
+								target = next_random % (vocab_size - 1) + 1;
+							if (target == word)
+								continue;
+							label = 0;
+						}
+
+						l2 = target * layer1_size;
+						f = 0;
+
+						for (c = 0; c < layer1_size; c++)
+							f += neu1[c] * syn1neg[c + l2];
+
+						if (f > MAX_EXP)
+							g = (label - 1) * alpha;
+						else if (f < -MAX_EXP)
+							g = (label - 0) * alpha;
+						else
+							g = (label - exp_table[(int)((f + MAX_EXP) * (EXP_TABLE_SIZE / MAX_EXP / 2))]) * alpha;
+
+						// Propagate errors output -> hidden for input update
+						for (c = 0; c < layer1_size; c++)
+							neu1e[c] += g * syn1neg[c + l2];
+
+						// update: Learn weights hidden -> output
+						for (c = 0; c < layer1_size; c++)
+							syn1neg[c + l2] += g * neu1[c];
+					}
+				}
+
+				// hidden -> in
+				for (a = b; a < window * 2 + 1 - b; a++) {
+					if (a != window) {
+						c = sentence_pos - window + a;
+						if (c < 0 || c >= sentence_length)
+							continue;
+
+						last_word = sentence[c];
+						if (last_word == -1)
+							continue;
+
+						// update hidden -> input
+						for (c = 0; c < layer1_size; c++)
+							syn0[c + last_word * layer1_size] += neu1e[c];
+
+						// update pinyin hidden -> input
+						if (model_type == 2 || model_type == 4){
+							for (c = 0; c < layer1_size; c++) {
+								pinyin_v[c + vocab[last_word].pinyin_idx * layer1_size] += neu1e[c] * pinyin_rate;
+							}
+						}
 					}
 				}
 			}
@@ -883,6 +886,7 @@ void *trainModelThread(void *id) {
 						neu1[c] += syn0[c + l1];
 						if (model_type == 2 || model_type == 4) {
 							neu1[c] += pinyin_v[c + l1_pinyin];
+							neu1[c] /= 2;
 						}
 					}
 
@@ -894,7 +898,7 @@ void *trainModelThread(void *id) {
 
 							// Propagate hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								f += syn0[c + l1] * syn1[c + l2];
+								f += neu1[c + l1] * syn1[c + l2];
 
 							if (f <= -MAX_EXP)
 								continue;
@@ -912,7 +916,7 @@ void *trainModelThread(void *id) {
 
 							// Learn weights hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								syn1[c + l2] += g * syn0[c + l1];
+								syn1[c + l2] += g * neu1[c + l1];
 						}
 					}
 
@@ -935,7 +939,7 @@ void *trainModelThread(void *id) {
 							f = 0;
 
 							for (c = 0; c < layer1_size; c++)
-								f += syn0[c + l1] * syn1neg[c + l2];
+								f += neu1[c + l1] * syn1neg[c + l2];
 
 							if (f > MAX_EXP)
 								g = (label - 1) * alpha;
@@ -950,15 +954,17 @@ void *trainModelThread(void *id) {
 
 							// Learn weights hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								syn1neg[c + l2] += g * syn0[c + l1];
+								syn1neg[c + l2] += g * neu1[c + l1];
 						}
 					}
 
 					// Learn weights input -> hidden
-					for (c = 0; c < layer1_size; c++)
+					for (c = 0; c < layer1_size; c++) {
 						syn0[c + l1] += neu1e[c];
-					if (model_type == 2 || model_type == 4)
-						pinyin_v[c + l1_pinyin] += neu1e[c] * pinyin_rate;
+						if (model_type == 2 || model_type == 4){
+							pinyin_v[c + l1_pinyin] += neu1e[c] * pinyin_rate;
+						}
+					}
 				}
 		}
 		sentence_pos++;
