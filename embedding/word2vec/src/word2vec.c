@@ -71,6 +71,7 @@ real alpha = 0.025, starting_alpha, sample = 0;
 real *syn0, *syn1, *syn1neg, *exp_table;
 
 real *pinyin_v; // pinyin vector
+real pinyin_rate = 1.0; // pinyin rate
 
 clock_t start;
 
@@ -657,6 +658,7 @@ void *trainModelThread(void *id) {
 	long long word_count = 0, last_word_count = 0, sentence[MAX_SENTENCE_LENGTH + 1];
 	long long l1, l2, c, target, label;
 	long long l1_pinyin;
+	long long cw = 0;
 	unsigned long long next_random = (long long)id;
 	real f, g;
 	clock_t now;
@@ -732,6 +734,7 @@ void *trainModelThread(void *id) {
 		b = next_random % window;
 
 		if (cbow) {  //train the cbow architecture
+			/* cw = 0; */
 			// in -> hidden
 			for (a = b; a < window * 2 + 1 - b; a++) {
 				if (a != window) {
@@ -749,12 +752,16 @@ void *trainModelThread(void *id) {
 
 					// joint pinyin info
 					if (model_type == 2 || model_type == 4) {
-						long long pinyin_idx = vocab[last_word].pinyin_idx;
+						/* long long pinyin_idx = vocab[last_word].pinyin_idx; */
 						for (c = 0; c < layer1_size; c++)
-							neu1[c] += pinyin_v[c + pinyin_idx * layer1_size];
+							neu1[c] += pinyin_v[c + vocab[last_word].pinyin_idx * layer1_size];
 					}
+					/* cw ++; */
 				}
 			}
+
+			/* for (c = 0; c < dim; c++) */
+			/* neu1[c] /= cw; // 取平均 */
 
 			if (hs) {
 				for (d = 0; d < vocab[word].codelen; d++) {
@@ -845,7 +852,7 @@ void *trainModelThread(void *id) {
 					if (model_type == 2 || model_type == 4){
 						long long pinyin_idx = vocab[last_word].pinyin_idx;
 						for (c = 0; c < layer1_size; c++)
-							pinyin_v[c + pinyin_idx * layer1_size] += neu1e[c];
+							pinyin_v[c + pinyin_idx * layer1_size] += neu1e[c] * pinyin_rate;
 					}
 				}
 			}
@@ -865,8 +872,19 @@ void *trainModelThread(void *id) {
 					if (model_type == 2 || model_type == 4) {
 						l1_pinyin = vocab[last_word].pinyin_idx * layer1_size;
 					}
+
+					for (c = 0; c < layer1_size; c++)
+						neu1[c] = 0;
+
 					for (c = 0; c < layer1_size; c++)
 						neu1e[c] = 0;
+
+					for (c = 0; c < layer1_size; c++) {
+						neu1[c] += syn0[c + l1];
+						if (model_type == 2 || model_type == 4) {
+							neu1[c] += pinyin_v[c + l1_pinyin];
+						}
+					}
 
 					// HIERARCHICAL SOFTMAX
 					if (hs) {
@@ -876,10 +894,7 @@ void *trainModelThread(void *id) {
 
 							// Propagate hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								if (model_type == 2 || model_type == 4)
-									f += (syn0[c + l1] + pinyin_v[c + l1_pinyin]) * syn1[c + l2];
-								else
-									f += syn0[c + l1] * syn1[c + l2];
+								f += syn0[c + l1] * syn1[c + l2];
 
 							if (f <= -MAX_EXP)
 								continue;
@@ -897,10 +912,7 @@ void *trainModelThread(void *id) {
 
 							// Learn weights hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								if (model_type == 2 || model_type == 4)
-									syn1[c + l2] += g * (syn0[c + l1] + pinyin_v[c + l1_pinyin]);
-								else
-									syn1[c + l2] += g * syn0[c + l1];
+								syn1[c + l2] += g * syn0[c + l1];
 						}
 					}
 
@@ -923,10 +935,7 @@ void *trainModelThread(void *id) {
 							f = 0;
 
 							for (c = 0; c < layer1_size; c++)
-								if (model_type == 2 || model_type == 4)
-									f += (syn0[c + l1] + pinyin_v[c + l1_pinyin]) * syn1neg[c + l2];
-								else
-									f += syn0[c + l1] * syn1neg[c + l2];
+								f += syn0[c + l1] * syn1neg[c + l2];
 
 							if (f > MAX_EXP)
 								g = (label - 1) * alpha;
@@ -941,10 +950,7 @@ void *trainModelThread(void *id) {
 
 							// Learn weights hidden -> output
 							for (c = 0; c < layer1_size; c++)
-								if (model_type == 2 || model_type == 4)
-									syn1neg[c + l2] += g * (syn0[c + l1] + pinyin_v[c + l1_pinyin]);
-								else
-									syn1neg[c + l2] += g * syn0[c + l1];
+								syn1neg[c + l2] += g * syn0[c + l1];
 						}
 					}
 
@@ -952,7 +958,7 @@ void *trainModelThread(void *id) {
 					for (c = 0; c < layer1_size; c++)
 						syn0[c + l1] += neu1e[c];
 					if (model_type == 2 || model_type == 4)
-						pinyin_v[c + l1_pinyin] += neu1e[c];
+						pinyin_v[c + l1_pinyin] += neu1e[c] * pinyin_rate;
 				}
 		}
 		sentence_pos++;
@@ -1184,6 +1190,7 @@ int main(int argc, char **argv) {
 	if ((i = argPos((char *)"-threads", argc, argv)) > 0) num_threads = atoi(argv[i + 1]);
 	if ((i = argPos((char *)"-min-count", argc, argv)) > 0) min_count = atoi(argv[i + 1]);
 	if ((i = argPos((char *)"-classes", argc, argv)) > 0) classes = atoi(argv[i + 1]);
+	if ((i = ArgPos((char *)"-pinyin-rate", argc, argv)) > 0) pinyin_rate = atof(argv[i + 1]); // set the factor <float> of learning rate for pinyin, default is 1.0
 	if ((i = argPos((char *)"-model-type", argc, argv)) > 0) model_type = atoi(argv[i + 1]);
 
 	printf("model_type: %d\n", model_type);
@@ -1217,10 +1224,10 @@ int main(int argc, char **argv) {
 	if (vocab_hash != NULL)
 		free(vocab_hash);
 
-    if (model_type == 2 || model_type == 4) {
-	if (pinyin_vocab_hash != NULL)
-		free(pinyin_vocab_hash);
-    }
+	if (model_type == 2 || model_type == 4) {
+		if (pinyin_vocab_hash != NULL)
+			free(pinyin_vocab_hash);
+	}
 
 	free(exp_table);
 	return 0;
