@@ -41,6 +41,7 @@ struct VocabWord {
 };
 
 char train_word_file[MAX_STRING], output_file[MAX_STRING];
+
 char train_pinyin_file[MAX_STRING];
 
 char save_vocab_file[MAX_STRING], read_vocab_file[MAX_STRING];
@@ -56,16 +57,19 @@ long long train_words = 0, word_count_actual = 0, file_size = 0, classes = 0;
 
 long long pinyin_vocab_max_size = 1000, pinyin_vocab_size = 0;
 int *pinyin_vocab_hash;
+
 /* char **pinyin_vocab; // vocab for pinyin */
 struct VocabPinyin {
 	long long count;
 	char *pinyin;
 };
+
 struct VocabPinyin *pinyin_vocab;
 int model_type = 1; //  1: original; 2: joint Pinyin; 3: TF-IDF weights-sum; 4: pinyin + TF-IDF, default 1
 
 real alpha = 0.025, starting_alpha, sample = 0;
 real *syn0, *syn1, *syn1neg, *exp_table;
+
 real *pinyin_v; // pinyin vector
 
 clock_t start;
@@ -130,6 +134,7 @@ int getStrHash(char *str, int type) {
 	unsigned long long i, hash = 0;
 	for (i = 0; i < strlen(str); i++)
 		hash = hash * 257 + str[i];
+
 	if (type == WORD_TYPE)
 		hash = hash % vocab_hash_size;
 	else
@@ -139,6 +144,7 @@ int getStrHash(char *str, int type) {
 
 // Returns position of a word in the vocabulary; if the word is not found, returns -1
 int searchWord(char *word) {
+	/* printf("search word: %s \n", word); */
 	unsigned int hash = getStrHash(word, WORD_TYPE);
 	while (1) {
 		if (vocab_hash[hash] == -1)
@@ -151,10 +157,14 @@ int searchWord(char *word) {
 }
 
 int searchPinyin(char *pinyin) {
+	/* printf("search pinyin: %s \n", pinyin); */
 	unsigned int hash = getStrHash(pinyin, PINYIN_TYPE);
+	/* printf("pinyin hash: %d \n", hash); */
 	while (1) {
 		if (pinyin_vocab_hash[hash] == -1)
 			return -1;
+		if (!strcmp(pinyin, pinyin_vocab[pinyin_vocab_hash[hash]].pinyin)) // equals
+			return pinyin_vocab_hash[hash];
 		hash = (hash + 1) % pinyin_vocab_hash_size;
 	}
 	return -1;
@@ -162,15 +172,16 @@ int searchPinyin(char *pinyin) {
 // Reads a word and returns its index in the vocabulary
 // type: WORD - word, PINYIN - pinyin
 int readWordIndex(FILE *fin) {
-	char str[MAX_STRING];
-	readStr(str, fin);
+	char word[MAX_STRING];
+	readStr(word, fin);
 	if (feof(fin))
 		return -1;
-	return searchWord(str);
+	return searchWord(word);
 }
 
 // Adds a word to the vocabulary, return cur index
 int addWordToVocab(char *word, int pinyin_idx) {
+	/* printf("addWordToVocab... %s - %d\n", word, pinyin_idx); */
 	unsigned int hash, length = strlen(word) + 1;
 	if (length > MAX_STRING)
 		length = MAX_STRING;
@@ -197,6 +208,7 @@ int addWordToVocab(char *word, int pinyin_idx) {
 
 // add a pinyin to pinyin vocabulary, return cur index
 int addPinyinToVocab(char *pinyin) {
+	/* printf("addPinyinToVocab... %s\n", pinyin); */
 	unsigned int hash, length = strlen(pinyin) + 1;
 	if (length > MAX_STRING)
 		length = MAX_STRING;
@@ -233,7 +245,7 @@ int pinyinVocabCompare(const void *a, const void *b) {
 
 // Sorts the vocabulary by frequency using word counts
 void sortVocab() {
-	printf("sortVocab...\n");
+	/* printf("sortVocab...\n"); */
 	long long i, size;
 	unsigned int hash;
 
@@ -258,9 +270,9 @@ void sortVocab() {
 
 	size = vocab_size;
 	train_words = 0;
-	for (i = 1; i < size; i++) { // Skip </s>
+	for (i = 0; i < size; i++) { // Skip </s>
 		// Words occuring less than min_count times will be discarded from the vocab
-		if (vocab[i].count < min_count) {
+		if ((vocab[i].count < min_count) && (i != 0)) {
 			vocab_size--;
 			free(vocab[i].word);
 			vocab[i].word = NULL;
@@ -284,7 +296,7 @@ void sortVocab() {
 
 // Reduces the vocabulary by removing infrequent tokens
 void readuceVocab() {
-	printf("readuceVocab...\n");
+	/* printf("readuceVocab...\n"); */
 	int i, j = 0;
 	unsigned int hash;
 	for (i = 0; i < vocab_size; i++){
@@ -316,9 +328,10 @@ void readuceVocab() {
 void learnVocabFromTrainFile() {
 	char word[MAX_STRING];
 	char pinyin[MAX_STRING];
-	FILE *fin_word;
-	FILE *fin_pinyin;
-	long long i, word_idx, pinyin_idx = 0;
+	FILE *fin_word = NULL;
+	FILE *fin_pinyin = NULL;
+	long long i, word_idx = 0, pinyin_idx = 0;
+
 	for (i = 0; i < vocab_hash_size; i++)
 		vocab_hash[i] = -1;
 
@@ -347,6 +360,7 @@ void learnVocabFromTrainFile() {
 		readStr(word, fin_word);
 		if (feof(fin_word))
 			break;
+
 		if (model_type == 2 || model_type == 4) {
 			readStr(pinyin, fin_pinyin);
 			if (feof(fin_pinyin))
@@ -358,22 +372,29 @@ void learnVocabFromTrainFile() {
 			printf("%lldK%c", train_words / 1000, 13);
 			fflush(stdout);
 		}
+
 		// check pinyin is exists ?
 		if (model_type == 2 || model_type == 4) {
 			pinyin_idx = searchPinyin(pinyin);
+			/* printf("cur pinyin: %s idx: %lld\n", pinyin, pinyin_idx); */
 			if (pinyin_idx == -1) {
-				pinyin_idx = addPinyinToVocab(word);
+				pinyin_idx = addPinyinToVocab(pinyin);
 				pinyin_vocab[pinyin_idx].count = 1;
-			} else
+			} else {
 				pinyin_vocab[pinyin_idx].count++;
+			}
 		}
 
 		word_idx = searchWord(word); // if word is exists.
+		/* printf("cur word: %s idx: %lld\n", word, word_idx); */
 		if (word_idx == -1) {
 			word_idx = addWordToVocab(word, pinyin_idx);
 			vocab[word_idx].count = 1;
-		} else
+		} else {
 			vocab[word_idx].count++;
+		}
+
+		/* printf("vocab[%lld] word: %s count: %lld\n", word_idx, vocab[word_idx].word, vocab[word_idx].count); */
 
 		if (vocab_size > vocab_hash_size * 0.7)
 			readuceVocab();
@@ -382,8 +403,6 @@ void learnVocabFromTrainFile() {
 	if (debug_mode > 0) {
 		printf("Vocab size: %lld\n", vocab_size);
 		printf("Max vocab size: %lld\n", vocab_max_size);
-		printf("Vocab[0].word: %s\n", vocab[0].word);
-		printf("Vocab[0].count: %lld\n", vocab[0].count);
 		printf("Words in train file: %lld\n", train_words);
 	}
 	file_size = ftell(fin_word);
@@ -412,15 +431,15 @@ void destroyVocab() {
 	free(vocab[vocab_size].word);
 	free(vocab);
 
-	for (i = 0; i < pinyin_vocab_size; i++) {
-		if (pinyin_vocab[i].pinyin != NULL)
-			free(pinyin_vocab[i].pinyin);
+	if (model_type == 2 || model_type == 4) {
+		for (i = 0; i < pinyin_vocab_size; i++) {
+			if (pinyin_vocab[i].pinyin != NULL)
+				free(pinyin_vocab[i].pinyin);
+		}
+		free(pinyin_vocab[pinyin_vocab_size].pinyin);
+		free(pinyin_vocab);
 	}
-	free(pinyin_vocab[pinyin_vocab_size].pinyin);
-	free(pinyin_vocab);
 }
-
-
 
 // Create binary Huffman tree using the word counts
 // Frequent words will have short unique binary codes
@@ -472,25 +491,30 @@ void createBinaryTree() {
 		parent_node[min2i] = vocab_size + i;
 		binary[min2i] = 1;
 	}
+
 	// Now assign binary code to each vocabulary word
-	for (i = 0; i < vocab_size; i++) {
-		a = i;
-		b = 0;
+	for (a = 0; a < vocab_size; a++) {
+		b = a;
+		i = 0;
 		while (1) {
-			code[b] = binary[a];
-			point[b] = a;
-			b++;
-			a = parent_node[a];
-			if (a == vocab_size * 2 - 2)
+			code[i] = binary[b];
+			point[i] = b;
+			i++;
+			b = parent_node[b];
+			if (b == vocab_size * 2 - 2)
 				break;
 		}
-		vocab[i].codelen = b;
-		vocab[i].point[0] = vocab_size - 2;
-		for (a = 0; a < b; a++) {
-			vocab[i].code[b - a - 1] = code[a];
-			vocab[i].point[b - a] = point[a] - vocab_size;
+		vocab[a].codelen = i;
+		vocab[a].point[0] = vocab_size - 2;
+		for (b = 0; b < i; b++) {
+			vocab[a].code[i - b - 1] = code[b];
+			vocab[a].point[i - b] = point[b] - vocab_size;
 		}
+		/* printf("vocab[%lld].word: %s\n", a, vocab[a].word); */
+		/* printf("vocab[%lld].code: %s\n", a, vocab[a].code); */
+		/* printf("vocab[%lld].codelen: %c\n", a, vocab[a].codelen); */
 	}
+
 	free(count);
 	free(binary);
 	free(parent_node);
@@ -515,7 +539,7 @@ void readVocab() {
 	long long a, i = 0;
 	char c;
 	FILE *fin_word = fopen(read_vocab_file, "rb");
-	FILE *fin_pinyin;
+	FILE *fin_pinyin = NULL;
 	char word[MAX_STRING];
 	if (fin_word == NULL) {
 		printf("Vocabulary file not found\n");
@@ -647,7 +671,7 @@ void *trainModelThread(void *id) {
 			word_count_actual += word_count - last_word_count;
 			last_word_count = word_count;
 			if ((debug_mode > 1)) {
-				now=clock();
+				now = clock();
 				printf("%cAlpha: %f  Progress: %.2f%%  Words/thread/sec: %.2fk  ", 13,
 						alpha,
 						word_count_actual / (real)(train_words + 1) * 100,
@@ -983,27 +1007,34 @@ void trainModel() {
 		fprintf(stderr, "Cannot open %s: permission denied\n", output_file);
 		exit(1);
 	}
+
 	if (classes == 0) {
+		printf("Save vectors...\n");
 		// Save the word vectors
 		fprintf(fo, "%lld %lld\n", vocab_size, layer1_size);
 		for (a = 0; a < vocab_size; a++) {
 			if (vocab[a].word != NULL) {
+				/* printf("%s\n", vocab[a].word); */
 				fprintf(fo, "%s ", vocab[a].word);
 			}
-			if (binary)
-				for (b = 0; b < layer1_size; b++)
+			if (binary){
+				for (b = 0; b < layer1_size; b++) {
 					if (model_type == 2 || model_type == 4){
 						real temp_v = syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b];
 						fwrite(&temp_v, sizeof(real), 1, fo);
 					}
 					else
 						fwrite(&syn0[a * layer1_size + b], sizeof(real), 1, fo);
-			else
-				for (b = 0; b < layer1_size; b++)
+				}
+			}
+			else {
+				for (b = 0; b < layer1_size; b++){
 					if (model_type == 2 || model_type == 4)
 						fprintf(fo, "%lf ", (syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b]));
 					else
 						fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
+				}
+			}
 
 			fprintf(fo, "\n");
 		}
@@ -1149,14 +1180,15 @@ int main(int argc, char **argv) {
 	if ((i = argPos((char *)"-model-type", argc, argv)) > 0) model_type = atoi(argv[i + 1]);
 
 	printf("model_type: %d\n", model_type);
-	/* printf("train_word_file: %s\n", train_word_file); */
-	/* printf("output: %s\n", output_file); */
+	printf("train_word_file: %s\n", train_word_file);
+	printf("train_pinyin_file: %s\n", train_pinyin_file);
+	printf("output: %s\n", output_file);
 
 	vocab = (struct VocabWord *)calloc(vocab_max_size, sizeof(struct VocabWord));
 	vocab_hash = (int *)calloc(vocab_hash_size, sizeof(int));
 
 	if (model_type == 2 || model_type == 4){
-		pinyin_vocab = (struct VocabPinyin*)calloc(pinyin_vocab_max_size, sizeof(struct VocabPinyin));
+		pinyin_vocab = (struct VocabPinyin *)calloc(pinyin_vocab_max_size, sizeof(struct VocabPinyin));
 		pinyin_vocab_hash = (int *)calloc(pinyin_vocab_hash_size, sizeof(int));
 	}
 
