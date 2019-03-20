@@ -28,7 +28,7 @@
 #define PINYIN_TYPE 111
 
 const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
-const int pinyin_vocab_hash_size = 20000000;
+const int pinyin_vocab_hash_size = 30000000;
 
 typedef float real;                    // Precision of float numbers
 
@@ -436,7 +436,7 @@ void destroyVocab() {
 			if (pinyin_vocab[i].pinyin != NULL)
 				free(pinyin_vocab[i].pinyin);
 		}
-		free(pinyin_vocab[pinyin_vocab_size].pinyin);
+		/* free(pinyin_vocab[pinyin_vocab_size].pinyin); */
 		free(pinyin_vocab);
 	}
 }
@@ -643,8 +643,10 @@ void destroyNet() {
 		free(syn1neg);
 	}
 
-	if (pinyin_v != NULL) {
-		free(pinyin_v);
+	if (model_type == 2 || model_type == 4) {
+		if (pinyin_v != NULL) {
+			free(pinyin_v);
+		}
 	}
 }
 
@@ -1009,7 +1011,7 @@ void trainModel() {
 	}
 
 	if (classes == 0) {
-		printf("Save vectors...\n");
+		printf("%cSave vectors...%c", 13, 13);
 		// Save the word vectors
 		fprintf(fo, "%lld %lld\n", vocab_size, layer1_size);
 		for (a = 0; a < vocab_size; a++) {
@@ -1020,6 +1022,7 @@ void trainModel() {
 			if (binary){
 				for (b = 0; b < layer1_size; b++) {
 					if (model_type == 2 || model_type == 4){
+						/* printf("vocab[%ld] word: %s pinyin_idx: %lld\n", a, vocab[a].word, vocab[a].pinyin_idx); */
 						real temp_v = syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b];
 						fwrite(&temp_v, sizeof(real), 1, fo);
 					}
@@ -1029,8 +1032,12 @@ void trainModel() {
 			}
 			else {
 				for (b = 0; b < layer1_size; b++){
-					if (model_type == 2 || model_type == 4)
-						fprintf(fo, "%lf ", (syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b]));
+					if (model_type == 2 || model_type == 4) {
+						/* printf("vocab[%ld] word: %s pinyin_idx: %lld\n", a, vocab[a].word, vocab[a].pinyin_idx); */
+						real temp_v = syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b];
+						/* printf("remp_v: %lf\n", temp_v); */
+						fprintf(fo, "%lf ", temp_v);
+					}
 					else
 						fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
 				}
@@ -1209,8 +1216,12 @@ int main(int argc, char **argv) {
 	destroyNet();
 	if (vocab_hash != NULL)
 		free(vocab_hash);
+
+    if (model_type == 2 || model_type == 4) {
 	if (pinyin_vocab_hash != NULL)
 		free(pinyin_vocab_hash);
+    }
+
 	free(exp_table);
 	return 0;
 }
