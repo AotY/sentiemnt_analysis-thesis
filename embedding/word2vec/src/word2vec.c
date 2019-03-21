@@ -486,7 +486,8 @@ void learnVocabFromTrainFile() {
     sortVocab();
     if (debug_mode > 0) {
         printf("Vocab size: %lld\n", vocab_size);
-        printf("Max vocab size: %lld\n", vocab_max_size);
+        printf("pinyin vocab size: %lld\n", pinyin_vocab_size);
+        printf("idf size: %lld\n", idf_size);
         printf("Words in train file: %lld\n", train_words);
     }
     file_size = ftell(fin_word);
@@ -743,7 +744,7 @@ void destroyNet() {
 }
 
 void *trainModelThread(void *id) {
-    printf("trainModelThread %lld...", (long long)id);
+    printf("trainModelThread %lld\n", (long long)id);
     /* fflush(stdout); */
     long long a, b, d, word, last_word, sentence_length = 0, sentence_pos = 0;
     long long word_count = 0, last_word_count = 0, sentence[MAX_SENTENCE_LENGTH + 1];
@@ -852,14 +853,14 @@ void *trainModelThread(void *id) {
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
                         idf_value = searchIDF(vocab[last_word].word);
-                        printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);
+                        /* printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value); */
                         cbow_words_value[cw] = idf_value;
                     }
                     cw ++;
                 }
             }
 
-            printf("cw: %lld\n", cw); 
+            /* printf("cw: %lld\n", cw);  */
             if ((cw > 0) && (cw <= (window * 2 + 1))){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
@@ -886,7 +887,7 @@ void *trainModelThread(void *id) {
 
                 // compute input
                 for (i = 0; i < cw; i++){
-                    printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word);
+                    /* printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word); */
 
                     // input: mean
                     for (c = 0; c < layer1_size; c++){
@@ -1126,13 +1127,14 @@ void trainModel() {
     }
     printf("Starting training using file %s\n", train_word_file);
     starting_alpha = alpha;
+
+    if (model_type == 3 || model_type == 4)
+        learnIDFFromFile();
+
     if (read_vocab_file[0] != 0)
         readVocab();
     else
         learnVocabFromTrainFile();
-
-    if (model_type == 3 || model_type == 4)
-        learnIDFFromFile();
 
     if (save_vocab_file[0] != 0)
         saveVocab(WORD_TYPE);
