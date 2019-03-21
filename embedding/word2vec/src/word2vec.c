@@ -163,12 +163,12 @@ real searchIDF(char *word){
     unsigned int hash = getStrHash(word, IDF_TYPE);
     while (1) {
         if (idf_hash[hash] == -1)
-            return 0;
+            return 0.0;
         if (!strcmp(word, idf_vocab[idf_hash[hash]].word))
             return idf_vocab[idf_hash[hash]].value;
         hash = (hash + 1) % idf_hash_size;
     }
-    return 0;
+    return 0.0;
 }
 
 void addWordIDF(char *word, real value) {
@@ -861,7 +861,7 @@ void *trainModelThread(void *id) {
             }
 
             /* printf("cw: %lld\n", cw);  */
-            if ((cw > 0) && (cw <= (window * 2 + 1))){
+            if (cw){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
                     idf_max = cbow_words_value[0];
@@ -873,14 +873,14 @@ void *trainModelThread(void *id) {
                             idf_min = cbow_words_value[i];
                     }
 
-                    if (idf_max > 0 && idf_max > idf_min) {
+                    if (idf_max > idf_min) {
                         for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
                     } else {
                         for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = 1 / cw;
                     }
-                }else {
+                } else {
                     for (i = 0; i < cw; i++)
                         cbow_words_weight[i] = 1 / cw;
                 }
