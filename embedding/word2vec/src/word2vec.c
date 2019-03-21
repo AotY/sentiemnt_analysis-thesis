@@ -752,7 +752,7 @@ void *trainModelThread(void *id) {
     real idf_value, idf_max, idf_min;
     long long cw = 0, i = 0;
     long long l1, l2, c, target, label;
-    long long l1_pinyin;
+    long long l1_pinyin = -1;
     unsigned long long next_random = (long long)id;
     real f, g;
     clock_t now;
