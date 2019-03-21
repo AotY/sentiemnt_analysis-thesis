@@ -26,9 +26,11 @@
 
 #define WORD_TYPE 110
 #define PINYIN_TYPE 111
+#define IDF_TYPE 1001
 
 const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
-const int pinyin_vocab_hash_size = 30000000;
+const int pinyin_vocab_hash_size = 20000000;
+const int idf_hash_size = 10000000;
 
 typedef float real;                    // Precision of float numbers
 
@@ -41,9 +43,8 @@ struct VocabWord {
 };
 
 char train_word_file[MAX_STRING], output_file[MAX_STRING];
-
 char train_pinyin_file[MAX_STRING];
-char idf_file[MAX_STRING]; // TODO
+char train_idf_file[MAX_STRING];
 
 char save_vocab_file[MAX_STRING], read_vocab_file[MAX_STRING];
 char save_pinyin_vocab_file[MAX_STRING], read_pinyin_vocab_file[MAX_STRING];
@@ -75,8 +76,8 @@ real pinyin_rate = 1.0; // pinyin rate
 struct IDF {
     char *word;
     real value;
-}
-struct IDF *idf_dict;
+};
+struct IDF *idf_vocab;
 
 long long idf_max_size = 1000, idf_size = 0;
 int *idf_hash;
@@ -141,7 +142,6 @@ void readStr(char *str, FILE *fin) {
 }
 
 
-
 // Returns hash value of a word (or pinyin)
 int getStrHash(char *str, int type) {
     unsigned long long i, hash = 0;
@@ -150,58 +150,62 @@ int getStrHash(char *str, int type) {
 
     if (type == WORD_TYPE)
         hash = hash % vocab_hash_size;
-    else
+    else if (type == PINYIN_TYPE)
         hash = hash % pinyin_vocab_hash_size;
+    else
+        hash = hash % idf_hash_size;
     return hash;
 }
 
-int searchIDF(char *word){
-    unsigned int hash = getStrHash(word, WORD_TYPE);
+real searchIDF(char *word){
+    /* printf("searchIDF word: %s\n", word); */
+    /* fflush(stdout); */
+    unsigned int hash = getStrHash(word, IDF_TYPE);
     while (1) {
         if (idf_hash[hash] == -1)
             return 0;
-        if (!strcmp(word, idf_dict[idf_hash[hash]].value))
-            return idf_dict[idf_hash[hash]].value;
-        hash = (hash + 1) % vocab_hash_size;
+        if (!strcmp(word, idf_vocab[idf_hash[hash]].word))
+            return idf_vocab[idf_hash[hash]].value;
+        hash = (hash + 1) % idf_hash_size;
     }
     return 0;
 }
 
-int addWordIDF(char *word, real value) {
+void addWordIDF(char *word, real value) {
     unsigned int hash, length = strlen(word) + 1;
     if (length > MAX_STRING)
         length = MAX_STRING;
 
-    idf_dict[idf_size].word = (char *)calloc(length, sizeof(char));
-    strcpy(idf_dict[idf_size].word, word);
-    idf_dict[idf_size].value = value;
+    idf_vocab[idf_size].word = (char *)calloc(length, sizeof(char));
+    strcpy(idf_vocab[idf_size].word, word);
+    idf_vocab[idf_size].value = value;
 
     idf_size++;
     // Reallocate memory if needed
     if (idf_size + 2 >= idf_max_size) {
         idf_max_size += 1000;
-        idf_dict = (struct IDF *)realloc(idf_dict, idf_max_size * sizeof(struct IDF));
+        idf_vocab = (struct IDF *)realloc(idf_vocab, idf_max_size * sizeof(struct IDF));
     }
-    hash = getStrHash(word, WORD_TYPE);
+    hash = getStrHash(word, IDF_TYPE);
     while (idf_hash[hash] != -1)
-        hash = (hash + 1) % vocab_hash_size;
+        hash = (hash + 1) % idf_hash_size;
 
     idf_hash[hash] = idf_size - 1;
-    return idf_size - 1;
+    /* printf("word: %s value: %f idx: %lld\n", word, value, (idf_size-1)); */
 }
 
-void readIDFFromFile(){
+void learnIDFFromFile(){
     FILE *fin = NULL;
     char word[MAX_STRING];
-    long long i, word_idx = 0;
+    long long i;
     real value;
 
-    for (i = 0; i < vocab_hash_size; i++)
+    for (i = 0; i < idf_hash_size; i++)
         idf_hash[i] = -1;
 
-    fin = fopen(idf_file, "rb");
+    fin = fopen(train_idf_file, "rb");
     if (fin == NULL) {
-        printf("ERROR: training word data file not found!\n");
+        printf("ERROR: train idf data file not found!\n");
         exit(1);
     }
 
@@ -210,10 +214,13 @@ void readIDFFromFile(){
         fscanf(fin, "%s\t%f\n", word, &value);
         /* printf("%s\t%f\n", word, value); */
 
-        word_idx = addWordIDF(word, value);
+        addWordIDF(word, value);
+        /* printf("%f\n", searchIDF(word)); */
+
         if (feof(fin))
             break;
     }
+    file_size = ftell(fin);
     fclose(fin);
 }
 
@@ -516,6 +523,14 @@ void destroyVocab() {
         /* free(pinyin_vocab[pinyin_vocab_size].pinyin); */
         free(pinyin_vocab);
     }
+
+    if (model_type == 3 || model_type == 4) {
+        for (i = 0; i < idf_size; i++) {
+            if (idf_vocab[i].word != NULL)
+                free(idf_vocab[i].word);
+        }
+        free(idf_vocab);
+    }
 }
 
 // Create binary Huffman tree using the word counts
@@ -676,7 +691,7 @@ void readVocab() {
 }
 
 void initNet() {
-    printf("Init Net...");
+    printf("Init Net...\n");
     long long a, b;
     a = posix_memalign((void **)&syn0, 128, (long long)vocab_size * layer1_size * sizeof(real));
     if (syn0 == NULL) {printf("Memory allocation failed\n"); exit(1);}
@@ -735,9 +750,9 @@ void *trainModelThread(void *id) {
     long long cbow_words[MAX_SENTENCE_LENGTH + 1];
     real cbow_words_value[MAX_SENTENCE_LENGTH + 1], cbow_words_weight[MAX_SENTENCE_LENGTH + 1];
     real idf_value, idf_max, idf_min;
+    long long cw = 0, i = 0;
     long long l1, l2, c, target, label;
     long long l1_pinyin;
-    long long cw = 0;
     unsigned long long next_random = (long long)id;
     real f, g;
     clock_t now;
@@ -795,6 +810,7 @@ void *trainModelThread(void *id) {
 
         if (feof(fi))
             break;
+
         if (word_count > train_words / num_threads)
             break;
 
@@ -814,9 +830,10 @@ void *trainModelThread(void *id) {
 
         if (cbow) {  //train the cbow architecture
             cw = 0;
-            for (a = 0; a < MAX_SENTENCE_LENGTH + 1; a++){
-                cbow_words[a] = -1;
-                cbow_words_value[a] = 0;
+            for (i = 0; i < MAX_SENTENCE_LENGTH + 1; i++){
+                cbow_words[i] = -1;
+                cbow_words_value[i] = 0;
+                cbow_words_weight[i] = 0;
             }
             // in -> hidden
             for (a = b; a < window * 2 + 1 - b; a++) {
@@ -831,49 +848,61 @@ void *trainModelThread(void *id) {
 
                     cbow_words[cw] = last_word;
 
-                    if (model_type == 2 || model_type == 4) {
-                        // get word idf value, TODO
-                        idf_value = searchIDF(word);
-                        cbow_words_value[idf_value];
+                    if (model_type == 3 || model_type == 4) {
+                        // get word idf value
+                        idf_value = searchIDF(vocab[last_word].word);
+                        /* printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value); */
+                        cbow_words_value[cw] = idf_value;
                     }
-
                     cw ++;
                 }
             }
 
-            if (cw){
+            /* printf("cw: %lld\n", cw); */
+            if (cw && cw <= MAX_SENTENCE_LENGTH){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
-                    idf_max = idf_min = cbow_words_value[0];
-                    for (a = 1; a < cw; a++){
-                        if (cbow_words_value[a] > idf_max)
-                            idf_max = cbow_words_value[a];
-                        if (cbow_words_value[a] < idf_min)
-                            idf_min = cbow_words_value[a];
+                    idf_max = cbow_words_value[0];
+                    idf_min = cbow_words_value[0];
+                    for (i = 1; i < cw; i++){
+                        if (cbow_words_value[i] > idf_max)
+                            idf_max = cbow_words_value[i];
+                        if (cbow_words_value[i] < idf_min)
+                            idf_min = cbow_words_value[i];
                     }
-                    if (idf_max == 0)
-                        continue;
-                    for (a = 0; a < cw; a++){
-                        cbow_words_weight[a] = (cbow_words_value[a] - idf_min) / (idf_max - idf_min);
+
+                    if (idf_max != 0 && idf_max != idf_min) {
+                        for (i = 0; i < cw; i++){
+                            cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
+                        }
+                    } else {
+                        for (i = 0; i < cw; i++){
+                            cbow_words_weight[i] = 1 / cw;
+                        }
                     }
+
                 }
 
-                for (a = 0; a < cw; a++){
+                // compute input
+                for (i = 0; i < cw; i++){
+                    if (cbow_words[i] == -1)
+                        continue;
+
                     // input: mean
                     for (c = 0; c < layer1_size; c++)
-                        neu1[c] += syn0[c + cbow_words[a] * layer1_size];
+                        neu1[c] += syn0[c + cbow_words[i] * layer1_size];
 
                     // joint pinyin info
                     if (model_type == 2 || model_type == 4) {
                         for (c = 0; c < layer1_size; c++){
-                            neu1[c] += pinyin_v[c + vocab[cbow_words[a]].pinyin_idx * layer1_size];
+                            neu1[c] += pinyin_v[c + vocab[cbow_words[i]].pinyin_idx * layer1_size];
                             neu1[c] /= 2;
                         }
                     }
 
                     if (model_type == 3 || model_type == 4){ // weighted-sum
                         for (c = 0; c < layer1_size; c++){
-                            neu1[c] *= cbow_words_weight[a];
+                            neu1[c] *= cbow_words_weight[i];
                         }
                     } else { // mean
                         for (c = 0; c < layer1_size; c++){
@@ -881,9 +910,6 @@ void *trainModelThread(void *id) {
                         }
                     }
                 }
-
-                /* for (c = 0; c < dim; c++) */
-                /* neu1[c] /= cw; // 取平均 */
 
                 if (hs) {
                     for (d = 0; d < vocab[word].codelen; d++) {
@@ -1018,7 +1044,7 @@ void *trainModelThread(void *id) {
 
                             // Propagate hidden -> output
                             for (c = 0; c < layer1_size; c++)
-                                f += neu1[c + l1] * syn1[c + l2];
+                                f += neu1[c] * syn1[c + l2];
 
                             if (f <= -MAX_EXP)
                                 continue;
@@ -1036,7 +1062,7 @@ void *trainModelThread(void *id) {
 
                             // Learn weights hidden -> output
                             for (c = 0; c < layer1_size; c++)
-                                syn1[c + l2] += g * neu1[c + l1];
+                                syn1[c + l2] += g * neu1[c];
                         }
                     }
 
@@ -1059,7 +1085,7 @@ void *trainModelThread(void *id) {
                             f = 0;
 
                             for (c = 0; c < layer1_size; c++)
-                                f += neu1[c + l1] * syn1neg[c + l2];
+                                f += neu1[c] * syn1neg[c + l2];
 
                             if (f > MAX_EXP)
                                 g = (label - 1) * alpha;
@@ -1074,7 +1100,7 @@ void *trainModelThread(void *id) {
 
                             // Learn weights hidden -> output
                             for (c = 0; c < layer1_size; c++)
-                                syn1neg[c + l2] += g * neu1[c + l1];
+                                syn1neg[c + l2] += g * neu1[c];
                         }
                     }
 
@@ -1114,6 +1140,9 @@ void trainModel() {
     else
         learnVocabFromTrainFile();
 
+    if (model_type == 3 || model_type == 4)
+        learnIDFFromFile();
+
     if (save_vocab_file[0] != 0)
         saveVocab(WORD_TYPE);
 
@@ -1143,7 +1172,7 @@ void trainModel() {
     }
 
     if (classes == 0) {
-        printf("%cSave vectors...%c", 13, 13);
+        printf("\nSave vectors...\n");
         // Save the word vectors
         fprintf(fo, "%lld %lld\n", vocab_size, layer1_size);
         for (a = 0; a < vocab_size; a++) {
@@ -1158,8 +1187,9 @@ void trainModel() {
                         real temp_v = syn0[a * layer1_size + b] + pinyin_v[vocab[a].pinyin_idx * layer1_size + b];
                         fwrite(&temp_v, sizeof(real), 1, fo);
                     }
-                    else
+                    else {
                         fwrite(&syn0[a * layer1_size + b], sizeof(real), 1, fo);
+                    }
                 }
             }
             else {
@@ -1170,8 +1200,9 @@ void trainModel() {
                         /* printf("remp_v: %lf\n", temp_v); */
                         fprintf(fo, "%lf ", temp_v);
                     }
-                    else
+                    else {
                         fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
+                    }
                 }
             }
 
@@ -1300,7 +1331,7 @@ int main(int argc, char **argv) {
     if ((i = argPos((char *)"-size", argc, argv)) > 0) layer1_size = atoi(argv[i + 1]);
     if ((i = argPos((char *)"-train-word", argc, argv)) > 0) strcpy(train_word_file, argv[i + 1]);
     if ((i = argPos((char *)"-train-pinyin", argc, argv)) > 0) strcpy(train_pinyin_file, argv[i + 1]);
-    if ((i = argPos((char *)"-idf-file", argc, argv)) > 0) strcpy(idf_file, argv[i + 1]);
+    if ((i = argPos((char *)"-train-idf", argc, argv)) > 0) strcpy(train_idf_file, argv[i + 1]);
     if ((i = argPos((char *)"-save-vocab", argc, argv)) > 0) strcpy(save_vocab_file, argv[i + 1]);
     if ((i = argPos((char *)"-save-pinyin-vocab", argc, argv)) > 0) strcpy(save_pinyin_vocab_file, argv[i + 1]);
     if ((i = argPos((char *)"-read-vocab", argc, argv)) > 0) strcpy(read_vocab_file, argv[i + 1]);
@@ -1317,12 +1348,14 @@ int main(int argc, char **argv) {
     if ((i = argPos((char *)"-threads", argc, argv)) > 0) num_threads = atoi(argv[i + 1]);
     if ((i = argPos((char *)"-min-count", argc, argv)) > 0) min_count = atoi(argv[i + 1]);
     if ((i = argPos((char *)"-classes", argc, argv)) > 0) classes = atoi(argv[i + 1]);
-    if ((i = ArgPos((char *)"-pinyin-rate", argc, argv)) > 0) pinyin_rate = atof(argv[i + 1]); // set the factor <float> of learning rate for pinyin, default is 1.0
+    // set the factor <float> of learning rate for pinyin, default is 1.0
+    if ((i = argPos((char *)"-pinyin-rate", argc, argv)) > 0) pinyin_rate = atof(argv[i + 1]);
     if ((i = argPos((char *)"-model-type", argc, argv)) > 0) model_type = atoi(argv[i + 1]);
 
-    printf("model_type: %d\n", model_type);
+    printf("\nmodel_type: %d\n", model_type);
     printf("train_word_file: %s\n", train_word_file);
     printf("train_pinyin_file: %s\n", train_pinyin_file);
+    printf("train_idf_file: %s\n", train_idf_file);
     printf("output: %s\n", output_file);
 
     vocab = (struct VocabWord *)calloc(vocab_max_size, sizeof(struct VocabWord));
@@ -1332,10 +1365,10 @@ int main(int argc, char **argv) {
         pinyin_vocab = (struct VocabPinyin *)calloc(pinyin_vocab_max_size, sizeof(struct VocabPinyin));
         pinyin_vocab_hash = (int *)calloc(pinyin_vocab_hash_size, sizeof(int));
     }
-    
+
     if (model_type == 3 || model_type == 4){
-        idf_dict = (struct VocabPinyin *)calloc(idf_max_size, sizeof(struct VocabPinyin));
-        idf_hash = (int *)calloc(vocab_hash_size, sizeof(int));
+        idf_vocab = (struct IDF *)calloc(idf_max_size, sizeof(struct IDF));
+        idf_hash = (int *)calloc(idf_hash_size, sizeof(int));
     }
 
     exp_table = (real *)malloc((EXP_TABLE_SIZE + 1) * sizeof(real));
@@ -1359,6 +1392,10 @@ int main(int argc, char **argv) {
     if (model_type == 2 || model_type == 4) {
         if (pinyin_vocab_hash != NULL)
             free(pinyin_vocab_hash);
+    }
+    if (model_type == 3 || model_type == 4) {
+        if (idf_hash != NULL)
+            free(idf_hash);
     }
 
     free(exp_table);
