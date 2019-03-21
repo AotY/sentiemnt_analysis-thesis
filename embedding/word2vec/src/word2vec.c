@@ -828,7 +828,7 @@ void *trainModelThread(void *id) {
         next_random = next_random * (unsigned long long)25214903917 + 11;
         b = next_random % window;
 
-        if (cbow) {  //train the cbow architecture
+        if (cbow) {  // train the cbow architecture
             cw = 0;
             for (i = 0; i < MAX_SENTENCE_LENGTH + 1; i++){
                 cbow_words[i] = -1;
@@ -851,7 +851,7 @@ void *trainModelThread(void *id) {
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
                         idf_value = searchIDF(vocab[last_word].word);
-                        /* printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value); */
+                        printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);
                         cbow_words_value[cw] = idf_value;
                     }
                     cw ++;
@@ -859,7 +859,7 @@ void *trainModelThread(void *id) {
             }
 
             /* printf("cw: %lld\n", cw); */
-            if (cw && cw <= MAX_SENTENCE_LENGTH){
+            if (cw){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
                     idf_max = cbow_words_value[0];
@@ -871,7 +871,7 @@ void *trainModelThread(void *id) {
                             idf_min = cbow_words_value[i];
                     }
 
-                    if (idf_max != 0 && idf_max != idf_min) {
+                    if (idf_max >= 0 && idf_max > idf_min) {
                         for (i = 0; i < cw; i++){
                             cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
                         }
@@ -883,11 +883,11 @@ void *trainModelThread(void *id) {
 
                 }
 
+                for (c = 0; c < layer1_size; c++)
+                    neu1[c] = 0;
+
                 // compute input
                 for (i = 0; i < cw; i++){
-                    if (cbow_words[i] == -1)
-                        continue;
-
                     // input: mean
                     for (c = 0; c < layer1_size; c++)
                         neu1[c] += syn0[c + cbow_words[i] * layer1_size];
