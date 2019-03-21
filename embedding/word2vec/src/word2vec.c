@@ -28,9 +28,9 @@
 #define PINYIN_TYPE 111
 #define IDF_TYPE 1001
 
-const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
-const int pinyin_vocab_hash_size = 30000000;
-const int idf_hash_size = 30000000;
+const int vocab_hash_size = 10000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
+const int pinyin_vocab_hash_size = 10000000;
+const int idf_hash_size = 10000000;
 
 typedef float real;                    // Precision of float numbers
 
@@ -852,14 +852,14 @@ void *trainModelThread(void *id) {
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
                         idf_value = searchIDF(vocab[last_word].word);
-                        /*printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);*/
+                        printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);
                         cbow_words_value[cw] = idf_value;
                     }
                     cw ++;
                 }
             }
 
-            /* printf("cw: %lld\n", cw); */
+            printf("cw: %lld\n", cw); 
             if ((cw > 0) && (cw <= (window * 2 + 1))){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
@@ -886,7 +886,7 @@ void *trainModelThread(void *id) {
 
                 // compute input
                 for (i = 0; i < cw; i++){
-                    /*printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word);*/
+                    printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word);
 
                     // input: mean
                     for (c = 0; c < layer1_size; c++){
