@@ -851,7 +851,7 @@ void *trainModelThread(void *id) {
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
                         idf_value = searchIDF(vocab[last_word].word);
-                        printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);
+                        /* printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value); */
                         cbow_words_value[cw] = idf_value;
                     }
                     cw ++;
