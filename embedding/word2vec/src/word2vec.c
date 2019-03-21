@@ -872,7 +872,7 @@ void *trainModelThread(void *id) {
                             idf_min = cbow_words_value[i];
                     }
 
-                    if (idf_max >= 0 && idf_max > idf_min) {
+                    if (idf_max > 0 && idf_max > idf_min) {
                         for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
                     } else {
