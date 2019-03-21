@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # train.sh
 # Copyright (C) 2019 LeonTao
@@ -13,7 +13,7 @@ SRC_DIR=./src
 NEGATIVE=5
 WINDOW=5
 BINARY=1
-THREADS=2
+THREADS=12
 
 TRAIN_WORD=$DATA_DIR/merged_data.txt
 TRAIN_PINYIN=$DATA_DIR/merged_data.pinyin.txt
@@ -51,9 +51,6 @@ do
 		done
 	done
 done
-
-
-# ./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -output $VECTOR_PATH -save-vocab $VOCAB_PATH -size $SIZE -binary $BINARY -cbow $CBOW -window $WINDOW -debug 2 -negative $NEGATIVE -threads 12 -min-count 5 -model-type $MODEL_TYPE
 
 # declare -a ceas=("hs" "negative") # computationally efficient approximation
 # if [$cea == "hs"]; then
