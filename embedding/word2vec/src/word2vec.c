@@ -28,9 +28,9 @@
 #define PINYIN_TYPE 111
 #define IDF_TYPE 1001
 
-const int vocab_hash_size = 10000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
-const int pinyin_vocab_hash_size = 10000000;
-const int idf_hash_size = 10000000;
+const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
+const int pinyin_vocab_hash_size = 30000000;
+const int idf_hash_size = 30000000;
 
 typedef float real;                    // Precision of float numbers
 
@@ -74,8 +74,8 @@ real *pinyin_v; // pinyin vector
 real pinyin_rate = 1.0; // pinyin rate
 
 struct IDF {
-    char *word;
     real value;
+    char *word;
 };
 struct IDF *idf_vocab;
 
@@ -91,6 +91,7 @@ const int table_size = 1e8;
 int *table;
 
 void initUnigramTable() {
+    printf("initUnigramTable...\n");
     int a, i;
     long long train_words_pow = 0;
     real d1, power = 0.75;
@@ -171,18 +172,37 @@ real searchIDF(char *word){
     return 0.0;
 }
 
-void addWordIDF(char *word, real value) {
+real searchIDFWord(char *word){
+    /* printf("searchIDF word: %s\n", word); */
+    /* fflush(stdout); */
+    unsigned int hash = getStrHash(word, IDF_TYPE);
+    while (1) {
+        if (idf_hash[hash] == -1)
+            return -1;
+        if (!strcmp(word, idf_vocab[idf_hash[hash]].word))
+            return idf_hash[hash];
+        hash = (hash + 1) % idf_hash_size;
+    }
+    return -1;
+}
+
+int addWordIDF(char *word, real value) {
+    printf("addWordIDF... word: %s value: %lf\n", word, value);
     unsigned int hash, length = strlen(word) + 1;
     if (length > MAX_STRING)
         length = MAX_STRING;
 
+    /*printf("before calloc... idf_size: %lld idf_vocab.word: %s length:%d \n", idf_size, idf_vocab[idf_size].word, length);*/
     idf_vocab[idf_size].word = (char *)calloc(length, sizeof(char));
+    /*idf_vocab[idf_size].word = (char *)malloc(length * sizeof(char));*/
+    printf("after calloc...\n");
     strcpy(idf_vocab[idf_size].word, word);
     idf_vocab[idf_size].value = value;
 
     idf_size++;
     // Reallocate memory if needed
     if (idf_size + 2 >= idf_max_size) {
+        printf("realloc...\n");
         idf_max_size += 1000;
         idf_vocab = (struct IDF *)realloc(idf_vocab, idf_max_size * sizeof(struct IDF));
     }
@@ -192,12 +212,14 @@ void addWordIDF(char *word, real value) {
 
     idf_hash[hash] = idf_size - 1;
     /* printf("word: %s value: %f idx: %lld\n", word, value, (idf_size-1)); */
+    return idf_size - 1;
 }
 
 void learnIDFFromFile(){
+    printf("learnIDFFromFile...\n");
     FILE *fin = NULL;
     char word[MAX_STRING];
-    long long i;
+    long long i, word_idx;
     real value;
 
     for (i = 0; i < idf_hash_size; i++)
@@ -212,10 +234,15 @@ void learnIDFFromFile(){
     idf_size = 0;
     while (!feof(fin)){
         fscanf(fin, "%s\t%f\n", word, &value);
-        /* printf("%s\t%f\n", word, value); */
+        /*printf("fscanf %s\t%f\n", word, value); */
 
-        addWordIDF(word, value);
-        /* printf("%f\n", searchIDF(word)); */
+        word_idx = searchIDFWord(word); // if word is exists.
+        printf("word_idx: %lld\n", word_idx);
+        if (word_idx == -1) {
+            word_idx = addWordIDF(word, value);
+        }
+
+         /*printf("%f\n", searchIDF(word)); */
 
         if (feof(fin))
             break;
@@ -410,6 +437,7 @@ void readuceVocab() {
 }
 
 void learnVocabFromTrainFile() {
+    printf("learnVocabFromTrainFile...\n");
     char word[MAX_STRING];
     char pinyin[MAX_STRING];
     FILE *fin_word = NULL;
