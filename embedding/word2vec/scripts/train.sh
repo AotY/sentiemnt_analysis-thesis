@@ -22,7 +22,7 @@ VOCAB_PATH=$DATA_DIR/merged_data.vocab.txt
 IDF_PATH=$DATA_DIR/merged_data.idf.txt
 
 # declare -a model_types=(3)
-declare -a model_type=(1 2 3 4)
+declare -a model_types=(1 2 3 4)
 declare -a sizes=(100 200 300)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 

@@ -29,8 +29,8 @@
 #define IDF_TYPE 1001
 
 const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vocabulary
-const int pinyin_vocab_hash_size = 20000000;
-const int idf_hash_size = 10000000;
+const int pinyin_vocab_hash_size = 30000000;
+const int idf_hash_size = 30000000;
 
 typedef float real;                    // Precision of float numbers
 
