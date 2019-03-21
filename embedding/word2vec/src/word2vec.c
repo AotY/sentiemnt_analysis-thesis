@@ -342,7 +342,7 @@ void sortVocab() {
         for (i = 0; i < pinyin_vocab_size; i++) { // Skip </s>
             hash = getStrHash(pinyin_vocab[i].pinyin, PINYIN_TYPE);
             while (pinyin_vocab_hash[hash] != -1)
-                hash = (hash + 1) % vocab_hash_size;
+                hash = (hash + 1) % pinyin_vocab_hash_size;
             pinyin_vocab_hash[hash] = i;
         }
     }
@@ -747,8 +747,8 @@ void *trainModelThread(void *id) {
     /* fflush(stdout); */
     long long a, b, d, word, last_word, sentence_length = 0, sentence_pos = 0;
     long long word_count = 0, last_word_count = 0, sentence[MAX_SENTENCE_LENGTH + 1];
-    long long cbow_words[MAX_SENTENCE_LENGTH + 1];
-    real cbow_words_value[MAX_SENTENCE_LENGTH + 1], cbow_words_weight[MAX_SENTENCE_LENGTH + 1];
+    long long cbow_words[2 * window + 1];
+    real cbow_words_value[2 * window + 1], cbow_words_weight[2 * window + 1];
     real idf_value, idf_max, idf_min;
     long long cw = 0, i = 0;
     long long l1, l2, c, target, label;
@@ -830,11 +830,12 @@ void *trainModelThread(void *id) {
 
         if (cbow) {  // train the cbow architecture
             cw = 0;
-            for (i = 0; i < MAX_SENTENCE_LENGTH + 1; i++){
+            for (i = 0; i < 2 * window + 1; i++){
                 cbow_words[i] = -1;
                 cbow_words_value[i] = 0;
                 cbow_words_weight[i] = 0;
             }
+
             // in -> hidden
             for (a = b; a < window * 2 + 1 - b; a++) {
                 if (a != window) {
@@ -851,7 +852,7 @@ void *trainModelThread(void *id) {
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
                         idf_value = searchIDF(vocab[last_word].word);
-                        /* printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value); */
+                        /*printf("last_word: %s idf_value: %f\n", vocab[last_word].word, idf_value);*/
                         cbow_words_value[cw] = idf_value;
                     }
                     cw ++;
@@ -859,12 +860,12 @@ void *trainModelThread(void *id) {
             }
 
             /* printf("cw: %lld\n", cw); */
-            if (cw){
+            if ((cw > 0) && (cw <= (window * 2 + 1))){
                 // normalize idf value
                 if (model_type == 3 || model_type == 4) {
                     idf_max = cbow_words_value[0];
                     idf_min = cbow_words_value[0];
-                    for (i = 1; i < cw; i++){
+                    for (i = 0; i < cw; i++){
                         if (cbow_words_value[i] > idf_max)
                             idf_max = cbow_words_value[i];
                         if (cbow_words_value[i] < idf_min)
@@ -872,41 +873,31 @@ void *trainModelThread(void *id) {
                     }
 
                     if (idf_max >= 0 && idf_max > idf_min) {
-                        for (i = 0; i < cw; i++){
+                        for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
-                        }
                     } else {
-                        for (i = 0; i < cw; i++){
+                        for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = 1 / cw;
-                        }
                     }
-
+                }else {
+                    for (i = 0; i < cw; i++)
+                        cbow_words_weight[i] = 1 / cw;
                 }
-
-                for (c = 0; c < layer1_size; c++)
-                    neu1[c] = 0;
 
                 // compute input
                 for (i = 0; i < cw; i++){
+                    /*printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word);*/
+
                     // input: mean
-                    for (c = 0; c < layer1_size; c++)
-                        neu1[c] += syn0[c + cbow_words[i] * layer1_size];
+                    for (c = 0; c < layer1_size; c++){
+                        neu1[c] += syn0[c + cbow_words[i] * layer1_size] * cbow_words_weight[i];
+                    }
 
                     // joint pinyin info
                     if (model_type == 2 || model_type == 4) {
                         for (c = 0; c < layer1_size; c++){
-                            neu1[c] += pinyin_v[c + vocab[cbow_words[i]].pinyin_idx * layer1_size];
+                            neu1[c] += pinyin_v[c + vocab[cbow_words[i]].pinyin_idx * layer1_size] * cbow_words_weight[i];
                             neu1[c] /= 2;
-                        }
-                    }
-
-                    if (model_type == 3 || model_type == 4){ // weighted-sum
-                        for (c = 0; c < layer1_size; c++){
-                            neu1[c] *= cbow_words_weight[i];
-                        }
-                    } else { // mean
-                        for (c = 0; c < layer1_size; c++){
-                            neu1[c] *= (1/cw);
                         }
                     }
                 }

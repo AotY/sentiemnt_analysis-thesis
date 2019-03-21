@@ -1,6 +1,8 @@
 SCRIPTS_DIR=../scripts
 BIN_DIR=../bin
 
+SHELL:= /bin/bash
+
 CC = gcc
 #The -Ofast might not work with older versions of gcc; in that case, use -O2
 CFLAGS = -lm -pthread -O2 -Wall -funroll-loops -Wno-unused-result
