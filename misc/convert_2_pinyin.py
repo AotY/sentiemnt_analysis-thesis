@@ -9,7 +9,7 @@ Convert words to pinyins
 """
 
 
-import os
+#  import os
 import argparse
 from tqdm import tqdm
 #  import snownlp
@@ -47,9 +47,10 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
                     pinyins.append(pinyin_str)
                 else:
                     pinyins.append(none_pinyin)
+        save_file.write('%s\n' % ' '.join(pinyins))
+
         del pinyins
 
-        save_file.write('%s\n' % ' '.join(pinyins))
 
 
 save_file.close()
