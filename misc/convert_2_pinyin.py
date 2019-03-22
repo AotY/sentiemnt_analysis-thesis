@@ -19,18 +19,22 @@ import pypinyin
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, default='')
+parser.add_argument('--document_split', type=str, default='DOCUMENT_SPLIT')
 parser.add_argument('--save_path', type=str, default='')
 args = parser.parse_args()
 
 
 save_file = open(args.save_path, 'w', encoding='utf-8')
+none_pinyin = 'none'
 
 with open(args.data_path, 'r', encoding='utf-8') as f:
     for line in tqdm(f):
         line = line.rstrip()
+        if line == args.document_split:
+            save_file.write('%s\n' % args.document_split)
+
         words = line.split()
         pinyins = list()
-        none_pinyin = 'none'
         for word in words:
             #  pinyin_list = snownlp.normal.get_pinyin(word)
             pinyin_list2 = pypinyin.pinyin(word, style=pypinyin.Style.NORMAL, heteronym=False)
@@ -43,6 +47,7 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
                     pinyins.append(pinyin_str)
                 else:
                     pinyins.append(none_pinyin)
+        del pinyins
 
         save_file.write('%s\n' % ' '.join(pinyins))
 

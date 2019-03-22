@@ -42,6 +42,9 @@ struct VocabWord {
     char *word, *code, codelen;
 };
 
+
+char ducument_split[MAX_STRING] = "DOCUMENT_SPLIT";
+
 char train_word_file[MAX_STRING], output_file[MAX_STRING];
 char train_pinyin_file[MAX_STRING];
 char train_idf_file[MAX_STRING];
@@ -187,7 +190,7 @@ real searchIDFWord(char *word){
 }
 
 int addWordIDF(char *word, real value) {
-    printf("addWordIDF... word: %s value: %lf\n", word, value);
+    /* printf("addWordIDF... word: %s value: %lf\n", word, value); */
     unsigned int hash, length = strlen(word) + 1;
     if (length > MAX_STRING)
         length = MAX_STRING;
@@ -195,14 +198,14 @@ int addWordIDF(char *word, real value) {
     /*printf("before calloc... idf_size: %lld idf_vocab.word: %s length:%d \n", idf_size, idf_vocab[idf_size].word, length);*/
     idf_vocab[idf_size].word = (char *)calloc(length, sizeof(char));
     /*idf_vocab[idf_size].word = (char *)malloc(length * sizeof(char));*/
-    printf("after calloc...\n");
+    /* printf("after calloc...\n"); */
     strcpy(idf_vocab[idf_size].word, word);
     idf_vocab[idf_size].value = value;
 
     idf_size++;
     // Reallocate memory if needed
     if (idf_size + 2 >= idf_max_size) {
-        printf("realloc...\n");
+        /* printf("realloc...\n"); */
         idf_max_size += 1000;
         idf_vocab = (struct IDF *)realloc(idf_vocab, idf_max_size * sizeof(struct IDF));
     }
@@ -219,11 +222,9 @@ void learnIDFFromFile(){
     printf("learnIDFFromFile...\n");
     FILE *fin = NULL;
     char word[MAX_STRING];
-    long long i, word_idx;
+    long long i, word_idx, size;
+    char ch1, ch2;
     real value;
-
-    for (i = 0; i < idf_hash_size; i++)
-        idf_hash[i] = -1;
 
     fin = fopen(train_idf_file, "rb");
     if (fin == NULL) {
@@ -231,22 +232,24 @@ void learnIDFFromFile(){
         exit(1);
     }
 
-    idf_size = 0;
-    while (!feof(fin)){
-        fscanf(fin, "%s\t%f\n", word, &value);
-        /*printf("fscanf %s\t%f\n", word, value); */
+    for (i = 0; i < idf_hash_size; i++)
+        idf_hash[i] = -1;
 
+    fscanf(f, "%lld", &size);
+    /* printf("size: %lld\n", size); */
+    idf_size = 0;
+    for (i = 0; i < size; i++){
+        /* fscanf(fin, "%s%c%f%c", &ch1, word, &value, &ch2); */
+        fscanf(fin, "%s\t%f\n", word, &value);
+        /* printf("fscanf----> %s\t%f\n", word, value); */
         word_idx = searchIDFWord(word); // if word is exists.
-        printf("word_idx: %lld\n", word_idx);
+        /* printf("word_idx: %lld\n", word_idx); */
         if (word_idx == -1) {
             word_idx = addWordIDF(word, value);
         }
-
-         /*printf("%f\n", searchIDF(word)); */
-
-        if (feof(fin))
-            break;
+        /*printf("%f\n", searchIDF(word)); */
     }
+
     file_size = ftell(fin);
     fclose(fin);
 }
@@ -285,6 +288,10 @@ int searchPinyin(char *pinyin) {
 int readWordIndex(FILE *fin) {
     char word[MAX_STRING];
     readStr(word, fin);
+
+    if (!strcmp(word, document_split))
+        readStr(word, fin);
+
     if (feof(fin))
         return -1;
     return searchWord(word);
@@ -477,9 +484,14 @@ void learnVocabFromTrainFile() {
             readStr(pinyin, fin_pinyin);
             if (feof(fin_pinyin))
                 break;
+            if (!strcmp(word, document_split))
+                continue
         }
 
-        train_words++;
+        if (!strcmp(word, document_split)) // if word equals to document_split
+            continue
+
+                train_words++;
         if ((debug_mode > 1) && (train_words % 100000 == 0)) {
             printf("%lldK%c", train_words / 1000, 13);
             fflush(stdout);
@@ -815,10 +827,13 @@ void *trainModelThread(void *id) {
                 word = readWordIndex(fi);
                 if (feof(fi))
                     break;
+
                 if (word == -1)
                     continue;
+
                 word_count++;
-                if (word == 0)
+
+                if (word == 0) // \n
                     break;
 
                 // The subsampling randomly discards frequent words while keeping the ranking same

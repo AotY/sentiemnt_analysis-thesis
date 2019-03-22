@@ -13,20 +13,21 @@ import pkuseg
 
 
 class Tokenizer:
-    def __init__(self, userdict_path=None):
+    def __init__(self, userdict_path=None, max_len=150):
         # load user dict
         #  if userdict_path is not None and userdict_path != '':
             #  jieba.load_userdict(userdict_path)
         self.seg = pkuseg.pkuseg()
+        self.max_len = max_len
 
     def tokenize(self, text):
         if isinstance(text, list):
             text = ' '.join(text)
 
         tokens = self.clean_str(text)
-        #  tokens = [token for token in tokens if len(token.split()) > 0]
         tokens = [token.split()[0]
                   for token in tokens if len(token.split()) > 0]
+        tokens = [token for token in tokens if len(token) <= self.max_len]
         return tokens
 
     def clean_str(self, text):
