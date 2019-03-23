@@ -51,6 +51,4 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
 
         del pinyins
 
-
-
 save_file.close()

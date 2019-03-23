@@ -45,9 +45,9 @@ data_sources = [
     'yf_amazon/ratings.csv',  # 52 万件商品，1100 多个类目，142 万用户，720 万条评论/评分数据
     'ez_douban/ratings.csv',  # 5 万多部电影（3 万多有电影名称，2 万多没有电影名称），2.8 万 用户，280 万条评分数据
     'wiki_zh',
-    #  'new2016zh',
     'baike_qa2019/baike_qa_train.json',  #
     'webtext2019zh/web_text_zh_train.json',
+    'new2016zh/news2016zh_train.json',
     'raw.question.txt',
     'label.cleaned.txt',
 ]
@@ -107,7 +107,7 @@ for source in data_sources:
                     texts.append(query + "\t" + answer)
                     texts.append(args.document_split)
 
-    elif source.endswith('baike_qa_train.json'):
+    elif source.endswith('web_text_zh_train.json'):
         texts = list()
         with open(source_path, 'r') as f:
             for line in f:
@@ -120,6 +120,17 @@ for source in data_sources:
                     query = title + ' ' + desc
                 if len(query) > args.min_len and len(content) > args.min_len:
                     texts.append(query + "\t" + content)
+                    texts.append(args.document_split)
+
+    elif source.endswith('news2016zh_train.json'):
+        texts = list()
+        with open(source_path, 'r') as f:
+            for line in f:
+                line = line.rstrip()
+                line = json.loads(line)
+                content = line['content']
+                if len(content) > args.min_len:
+                    texts.append(content)
                     texts.append(args.document_split)
 
     elif source.startswith('wiki_zh'):
