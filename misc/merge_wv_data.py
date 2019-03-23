@@ -72,8 +72,11 @@ for source in data_sources:
         texts = list()
         for comment in df['comment']:
             if len(comment) > args.min_len:
-                texts.append(comment)
-                texts.append(args.document_split)
+                #  texts.append(comment)
+                #  texts.append(args.document_split)
+                words = tokenizer.tokenize(comment)
+                save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % args.document_split)
 
     elif source.startswith('zhidao_filter'):
         texts = list()
@@ -88,8 +91,12 @@ for source in data_sources:
             answer = items[2]
 
             if len(query) > args.min_len and len(answer) > args.min_len:
-                texts.append(query + "\t" + answer)
-                texts.append(args.document_split)
+                #  texts.append(query + "\t" + answer)
+                #  texts.append(args.document_split)
+                words = tokenizer.tokenize(query + '\t' + answer)
+                save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % args.document_split)
+
     elif source.endswith('baike_qa_train.json'):
         texts = list()
         with open(source_path, 'r') as f:
@@ -104,8 +111,11 @@ for source in data_sources:
                 else:
                     query = desc
                 if len(query) > args.min_len and len(answer) > args.min_len:
-                    texts.append(query + "\t" + answer)
-                    texts.append(args.document_split)
+                    #  texts.append(query + "\t" + answer)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(query + '\t' + answer)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('web_text_zh_train.json'):
         texts = list()
@@ -119,8 +129,11 @@ for source in data_sources:
                 if len(desc) > args.min_len and len(desc) != len(title):
                     query = title + ' ' + desc
                 if len(query) > args.min_len and len(content) > args.min_len:
-                    texts.append(query + "\t" + content)
-                    texts.append(args.document_split)
+                    #  texts.append(query + "\t" + content)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(query + '\t' + content)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('news2016zh_train.json'):
         texts = list()
@@ -130,8 +143,11 @@ for source in data_sources:
                 line = json.loads(line)
                 content = line['content']
                 if len(content) > args.min_len:
-                    texts.append(content)
-                    texts.append(args.document_split)
+                    #  texts.append(content)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(content)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
 
     elif source.startswith('wiki_zh'):
         texts = list()
@@ -146,8 +162,11 @@ for source in data_sources:
                             line = json.loads(line)
                             text = line['text']
                             if len(text) > args.min_len:
-                                texts.append(text)
-                                texts.append(args.document_split)
+                                #  texts.append(text)
+                                #  texts.append(args.document_split)
+                                words = tokenizer.tokenize(text)
+                                save_file.write('%s\n' % ' '.join(words))
+                                save_file.write('%s\n' % args.document_split)
     elif source.startswith('new2016zh'):
         texts = list()
         with open(source_path, 'r') as f:
@@ -162,8 +181,11 @@ for source in data_sources:
                 #  if len(desc) > args.min_len:
                 #  texts.append(desc)
                 if len(content) > args.min_len:
-                    texts.append(content)
-                    texts.append(args.document_split)
+                    #  texts.append(content)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(content)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('raw.question.txt'):
         texts = list()
@@ -177,8 +199,11 @@ for source in data_sources:
                 except ValueError as e:
                     continue
                 if len(query) > args.min_len and len(response) > args.min_len:
-                    texts.append(query + '\t' + response)
-                    texts.append(args.document_split)
+                    #  texts.append(query + '\t' + response)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(query + '\t' + response)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('label.cleaned.txt'):
         texts = list()
@@ -194,15 +219,22 @@ for source in data_sources:
                     continue
                 text = text.rstrip()
                 if len(text) > args.min_len:
-                    texts.append(text)
-                    texts.append(args.document_split)
+                    #  texts.append(text)
+                    #  texts.append(args.document_split)
+                    words = tokenizer.tokenize(text)
+                    save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % args.document_split)
     else:
         texts = list()
         for review in df['review']:
             if len(review) > args.min_len:
-                texts.append(review)
-                texts.append(args.document_split)
+                #  texts.append(review)
+                #  texts.append(args.document_split)
+                words = tokenizer.tokenize(review)
+                save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % args.document_split)
 
+    """
     print('Save text...')
     #  for text in tqdm(texts):
     for text in texts:
@@ -215,6 +247,7 @@ for source in data_sources:
                 words = tokenizer.tokenize(text)
                 save_file.write('%s\n' % ' '.join(words))
     del texts
+    """
 
 save_file.write('%s\n' % args.document_split)
 save_file.close()

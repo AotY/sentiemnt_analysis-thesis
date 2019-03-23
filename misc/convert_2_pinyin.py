@@ -32,6 +32,7 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
         line = line.rstrip()
         if line == args.document_split:
             save_file.write('%s\n' % args.document_split)
+            continue
 
         words = line.split()
         pinyins = list()
