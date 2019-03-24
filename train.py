@@ -132,13 +132,14 @@ args.device = device
 #  vocab.load(args.vocab_path)
 
 # build vocab
-vocab_freq_path = args.data_path.split('/')[-1].split('.')[0] + '.vocab_freq.dist'
+data_name = args.data_path.split('/')[-1].split('.')[0]
+vocab_freq_path = os.path.join(args.data_dir, data_name + '.vocab_freq.dist')
 vocab = build_vocab(vocab_freq_path, args.vocab_size, args.min_count)
 args.vocab_size = int(vocab.size)
 print('vocab size: ', args.vocab_size)
 
 # load data
-datas = load_data(args, vocab)
+datas = load_data(args, vocab, data_name)
 
 # dataset, data_load
 train_data, valid_data, test_data, args = build_dataloader(args, datas)

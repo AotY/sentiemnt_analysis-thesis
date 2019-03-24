@@ -35,25 +35,25 @@ python train.py \
     --k_size 32 \
     --v_size 32 \
     --dense_size 128 \
-    --inner_hidden_size 256 \
-    --regression_dense_size 256 \
+    --inner_hidden_size 128 \
+    --regression_dense_size 128 \
     --num_heads 4 \
     --in_channels 1 \
-    --out_channels 128 \
+    --out_channels 100 \
     --kernel_heights 3 4 2 \
     --stride 1 \
     --padding 0 \
     --dropout 0.7 \
     --lr 0.001 \
-    --min_len 1 \
-    --max_len 50 \
+    --min_len 3 \
+    --max_len 170 \
     --batch_size 128 \
     --valid_split 0.15 \
     --test_split 1 \
-    --epochs 20 \
+    --epochs 25 \
     --start_epoch 1 \
-    --lr_patience 3 \
-    --es_patience 8 \
+    --lr_patience 4 \
+    --es_patience 9 \
     --device cuda \
     --seed 23 \
     --save_mode all \

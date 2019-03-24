@@ -15,10 +15,10 @@ from misc.vocab import PAD_ID, EOS_ID
 from misc.sampler.imbalanced_dataset_sampler import ImbalancedDatasetSampler
 
 
-def load_data(config, vocab):
+def load_data(config, vocab, data_name):
     print('load data...')
 
-    datas_pkl_path = os.path.join(config.data_dir, 'datas.pkl')
+    datas_pkl_path = os.path.join(config.data_dir, '%s.datas.pkl' % data_name)
     if not os.path.exists(datas_pkl_path):
         datas = list()
         label_dates = {}
@@ -36,8 +36,8 @@ def load_data(config, vocab):
                 ids = vocab.words_to_id(tokens)
 
                 label = int(label)
-                if config.problem == 'classification':
-                    label -= 1
+                # if config.problem == 'classification':
+                    # label -= 1
 
                 if label_dates.get(label) is None:
                     label_dates[label] = list()

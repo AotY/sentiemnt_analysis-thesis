@@ -6,7 +6,7 @@
 import sys
 import argparse
 from tqdm import tqdm
-from vocab import Vocab
+from .vocab import Vocab
 
 def read_distribution(vocab_freq_path):
     freq_list = []

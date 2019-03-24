@@ -43,7 +43,7 @@ struct VocabWord {
 };
 
 
-char ducument_split[MAX_STRING] = "DOCUMENT_SPLIT";
+char document_split[MAX_STRING] = "DOCUMENT_SPLIT";
 
 char train_word_file[MAX_STRING], output_file[MAX_STRING];
 char train_pinyin_file[MAX_STRING];
@@ -223,7 +223,6 @@ void learnIDFFromFile(){
     FILE *fin = NULL;
     char word[MAX_STRING];
     long long i, word_idx, size;
-    char ch1, ch2;
     real value;
 
     fin = fopen(train_idf_file, "rb");
@@ -235,11 +234,10 @@ void learnIDFFromFile(){
     for (i = 0; i < idf_hash_size; i++)
         idf_hash[i] = -1;
 
-    fscanf(f, "%lld", &size);
+    fscanf(fin, "%lld", &size);
     /* printf("size: %lld\n", size); */
     idf_size = 0;
     for (i = 0; i < size; i++){
-        /* fscanf(fin, "%s%c%f%c", &ch1, word, &value, &ch2); */
         fscanf(fin, "%s\t%f\n", word, &value);
         /* printf("fscanf----> %s\t%f\n", word, value); */
         word_idx = searchIDFWord(word); // if word is exists.
@@ -289,7 +287,7 @@ int readWordIndex(FILE *fin) {
     char word[MAX_STRING];
     readStr(word, fin);
 
-    if (!strcmp(word, document_split))
+    while (strcmp(word, document_split) == 0)
         readStr(word, fin);
 
     if (feof(fin))
@@ -484,14 +482,14 @@ void learnVocabFromTrainFile() {
             readStr(pinyin, fin_pinyin);
             if (feof(fin_pinyin))
                 break;
-            if (!strcmp(word, document_split))
-                continue
+            if (strcmp(word, document_split) == 0)
+                continue;
         }
 
-        if (!strcmp(word, document_split)) // if word equals to document_split
-            continue
+        if (strcmp(word, document_split) == 0) // if word equals to document_split
+            continue;
 
-                train_words++;
+        train_words++;
         if ((debug_mode > 1) && (train_words % 100000 == 0)) {
             printf("%lldK%c", train_words / 1000, 13);
             fflush(stdout);

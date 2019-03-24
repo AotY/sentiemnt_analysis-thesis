@@ -36,6 +36,7 @@ class BERTCM(nn.Module):
         self.model_type = config.model_type
 
         self.norm = LayerNorm(config.embedding_size)
+        self.linear_final = None
         if self.model_type in ['bert_max_kernel', 'bert_avg_kernel']:
             self.linear_final = nn.Linear(config.embedding_size * 5, config.n_classes)
         elif self.model_type == 'bert_max_min':
@@ -43,7 +44,7 @@ class BERTCM(nn.Module):
         elif self.model_type.find('bert_rnn') != -1:
             self.rnn = RNNEncoder(config)
             self.linear_final = nn.Linear(config.hidden_size, config.n_classes)
-        elif self.model_type.find('bert_cnn') != -1:
+        elif self.model_type == 'bert_cnn':
             self.cnn = CNNEncoder(config)
             self.linear_final = nn.Linear(len(config.kernel_heights) * config.out_channels, config.n_classes)
         elif self.model_type == 'bert_sum':
@@ -80,11 +81,11 @@ class BERTCM(nn.Module):
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             # self.norm = LayerNorm(config.embedding_size)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
-
-        if self.model_type in ['bert_max_embedding', 'bert_avg_embedding', 'bert_weight_embedding']:
-            self.linear_final = nn.Linear(config.max_len, config.n_classes)
-        else:
-            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+        if self.linear_final is None:
+            if self.model_type in ['bert_max_embedding', 'bert_avg_embedding', 'bert_weight_embedding']:
+                self.linear_final = nn.Linear(config.max_len, config.n_classes)
+            else:
+                self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
 
     def forward(self, inputs, inputs_pos, lengths=None):
         # [batch_size, max_len, embedding_size], [] list
