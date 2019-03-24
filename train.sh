@@ -16,9 +16,10 @@ mkdir -p log/
 mkdir -p models/
 
 python train.py \
-    --data_path data/label.augment.cleaned.txt \
-    --vocab_path data/vocab.word2idx.dict \
+    --data_path data/ChnSentiCorp_htl_all.cleand.txt \
     --data_dir data/ \
+    --vocab_size 8000 \
+    --min_count 1 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
@@ -26,9 +27,9 @@ python train.py \
     --model_type bert_weight \
     --rnn_type GRU \
     --n_classes 2 \
-    --embedding_size 300 \
-    --hidden_size 512 \
-    --num_layers 2 \
+    --embedding_size 100 \
+    --hidden_size 256 \
+    --num_layers 1 \
     --bidirectional \
     --t_num_layers 1 \
     --k_size 32 \
@@ -36,7 +37,7 @@ python train.py \
     --dense_size 128 \
     --inner_hidden_size 256 \
     --regression_dense_size 256 \
-    --num_heads 6 \
+    --num_heads 4 \
     --in_channels 1 \
     --out_channels 128 \
     --kernel_heights 3 4 2 \
@@ -75,6 +76,7 @@ python train.py \
     #--classes_weight  0.0082 0.00151 0.000053 \
     # --smoothing \
     # --transformer_size 100 \
+    # --vocab_path data/vocab.word2idx.dict \
 
 
 /

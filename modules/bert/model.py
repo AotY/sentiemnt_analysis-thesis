@@ -59,13 +59,15 @@ class BERTCM(nn.Module):
             self.weight = nn.Parameter(torch.zeros(config.embedding_size, 1, device=config.device))
             # self.weight.data.fill_(0)
             self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
-        elif self.model_type == 'bert_sample':
+        elif self.model_type == 'bert_sample_manual':
             self.sample_weight = torch.ones(config.max_len) / config.max_len
             self.sample_num = 6
             self.sample_weight[:20] = 0.1
             self.sample_weight[:10] = 0.2
             self.sample_weight[:5] = 0.3
             self.linear_final = nn.Linear(config.embedding_size * self.sample_num, config.n_classes)
+        elif self.model_type == 'bert_sample_exp':
+            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
             self.max_pool1d1 = nn.MaxPool1d(3) # 15
@@ -135,10 +137,16 @@ class BERTCM(nn.Module):
             outputs = self.norm(outputs)
             outputs = outputs.transpose(1, 2)
             outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
-        elif self.model_type == 'bert_sample':
+        elif self.model_type == 'bert_sample_manual':
             random_idxes = torch.multinomial(self.sample_weight, self.sample_num).to(outputs.device)
             outputs = outputs.index_select(1, random_idxes)
             outputs = outputs.view(outputs.size(0), -1)
+        elif self.model_type == 'bert_sample_exp':
+            # [batch_size, max_len]
+            mean_outputs = outputs.mean(dim=2)
+            indexs = torch.multinomial(torch.exp(mean_outputs), 1)  # batch_size x 1 (sampling from each row)
+            # [ batch_size, embedding_size]
+            outputs = torch.cat([torch.index_select(output, 0, index) for output, index in zip(outputs, indexs)])
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)

@@ -42,6 +42,7 @@ from misc.vocab import PAD_ID
 
 from misc.dataset import load_data, build_dataloader
 from misc.tokenizer import Tokenizer
+from misc.build_vocab import build_vocab
 
 from visualization.self_attention.visualization import create_html
 from visualization.transformer import seaborn_draw
@@ -53,7 +54,8 @@ parser.add_argument('--data_dir', type=str, help='')
 parser.add_argument('--max_label_ratio', type=float, default=1.0)
 parser.add_argument('--visualization_dir', type=str, help='')
 parser.add_argument('--vocab_path', type=str, help='')
-parser.add_argument('--vocab_size', type=int, help='')
+parser.add_argument('--vocab_size', type=float, help='')
+parser.add_argument('--min_count', type=int, help='', default=1)
 parser.add_argument('--rnn_type', type=str, help='RNN, LSTM, GRU')
 parser.add_argument('--embedding_size', type=int)
 parser.add_argument('--hidden_size', type=int)
@@ -126,8 +128,12 @@ args.device = device
 # print('device: {}'.format(device))
 
 # load vocab
-vocab = Vocab()
-vocab.load(args.vocab_path)
+#  vocab = Vocab()
+#  vocab.load(args.vocab_path)
+
+# build vocab
+vocab_freq_path = args.data_path.split('/')[-1].split('.')[0] + '.vocab_freq.dist'
+vocab = build_vocab(vocab_freq_path, args.vocab_size, args.min_count)
 args.vocab_size = int(vocab.size)
 print('vocab size: ', args.vocab_size)
 
