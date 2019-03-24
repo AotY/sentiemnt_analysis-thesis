@@ -5,7 +5,7 @@
 # Distributed under terms of the MIT license.
 
 """
-preprocessing
+Stats
 """
 
 import os
@@ -25,7 +25,8 @@ parser.add_argument('--data_path', type=str, default='')
 parser.add_argument('--save_dir', type=str, default='./data')
 
 args = parser.parse_args()
-data_name = args.data_path.split('.')[0]
+data_name = args.data_path.split('/')[-1].split('.')[0]
+print('data_name: %s' % data_name)
 
 
 def stats():

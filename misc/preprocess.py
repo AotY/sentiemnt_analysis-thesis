@@ -48,9 +48,11 @@ def main():
             continue
 
         words = tokenizer.tokenize(text)
-        save_file.write('%d\t%s' % (label, ' '.join(words)))
+        if len(words) == 0:
+            continue
+        save_file.write('%d\t%s\n' % (label, ' '.join(words)))
 
-    save_file.save()
+    save_file.close()
 
 
 if __name__ == '__main__':

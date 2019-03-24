@@ -11,9 +11,9 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser()
 
 
-parser.add_argument('--vocab', action='store_true', help='')
 parser.add_argument('--dist', type=str, help='')
 parser.add_argument('--num', type=int, help='')
+parser.add_argument('--vocab', action='store_true', help='')
 
 args = parser.parse_args()
 

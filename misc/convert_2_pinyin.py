@@ -38,8 +38,8 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
         pinyins = list()
         for word in words:
             #  pinyin_list = snownlp.normal.get_pinyin(word)
-            pinyin_list2 = pypinyin.pinyin(word, style=pypinyin.Style.NORMAL, heteronym=False)
-            pinyin_list = [heteronyms[0] for heteronyms in pinyin_list2]
+            pinyin_list_h = pypinyin.pinyin(word, style=pypinyin.Style.NORMAL, heteronym=False)
+            pinyin_list = [heteronyms[0] for heteronyms in pinyin_list_h]
             pinyin_str = ''.join(pinyin_list)
             if pinyin_str != word:
                 pinyins.append(pinyin_str)

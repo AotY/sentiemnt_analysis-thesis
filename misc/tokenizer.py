@@ -7,7 +7,7 @@
 """
 Tokenizer
 """
-#  import re
+import re
 #  import jieba
 import pkuseg
 
@@ -19,6 +19,8 @@ class Tokenizer:
             #  jieba.load_userdict(userdict_path)
         self.seg = pkuseg.pkuseg()
         self.max_len = max_len
+        url_regex_str = r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+' # URLs
+        self.url_re = re.compile(url_regex_str, re.VERBOSE | re.IGNORECASE)
 
     def tokenize(self, text):
         if isinstance(text, list):
@@ -32,20 +34,17 @@ class Tokenizer:
 
     def clean_str(self, text):
         text = text.lower()
+        text = re.sub('^', ' ', text)
+        text = re.sub('$', ' ', text)
 
-        text = text.replace(':', ' : ')
-        text = text.replace(',', ' , ')
-        text = text.replace('：', ' ： ')
-        text = text.replace('，', ' ， ')
-        text = text.replace('。', ' 。 ')
-        text = text.replace('"', ' " ')
-        text = text.replace('“', ' “ ')
-        text = text.replace('”', ' ” ')
-
+        text = self.url_re.sub(' URL ', text)
 
         #  tokens = list(jieba.cut(text))
         tokens = self.seg.cut(text)
-        #  tokens = [token.split()[0] for token in tokens if len(token.split()) > 0]
+
+        text = ' '.join(tokens)
+        text = text.replace('URL', '<URL>')
+        tokens = text.split()
 
         if len(tokens) == 0:
             return []
