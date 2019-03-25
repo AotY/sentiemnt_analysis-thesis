@@ -786,8 +786,9 @@ void *trainModelThread(void *id) {
     /* fflush(stdout); */
     long long a, b, d, word, last_word, sentence_length = 0, sentence_pos = 0;
     long long word_count = 0, last_word_count = 0, sentence[MAX_SENTENCE_LENGTH + 1];
-    long long cbow_words[2 * window + 1];
-    real cbow_words_value[2 * window + 1], cbow_words_weight[2 * window + 1];
+    long long cbow_words[MAX_STRING] = {-1};
+    real cbow_words_value[MAX_STRING] = {0.0};
+    real cbow_words_weight[MAX_STRING] = {1.0};
     real idf_value, idf_max, idf_min;
     long long cw = 0, i = 0;
     long long l1, l2, c, target, label;
@@ -872,12 +873,6 @@ void *trainModelThread(void *id) {
 
         if (cbow) {  // train the cbow architecture
             cw = 0;
-            for (i = 0; i < 2 * window + 1; i++){
-                cbow_words[i] = -1;
-                cbow_words_value[i] = 0;
-                cbow_words_weight[i] = 0;
-            }
-
             // in -> hidden
             for (a = b; a < window * 2 + 1 - b; a++) {
                 if (a != window) {
@@ -890,6 +885,10 @@ void *trainModelThread(void *id) {
                         continue;
 
                     cbow_words[cw] = last_word;
+                    
+                    /*for (c = 0; c < layer1_size; c++){*/
+                        /*neu1[c] += syn0[c + cbow_words[cw] * layer1_size];*/
+                    /*}*/
 
                     if (model_type == 3 || model_type == 4) {
                         // get word idf value
@@ -902,9 +901,12 @@ void *trainModelThread(void *id) {
             }
 
             /* printf("cw: %lld\n", cw);  */
-            if (cw){
-                // normalize idf value
+            if (cw > 0){
+                /*for (c = 0; c < layer1_size; c++)*/
+                    /*neu1[c] /= cw;*/
+                
                 if (model_type == 3 || model_type == 4) {
+                    // normalize idf value
                     idf_max = cbow_words_value[0];
                     idf_min = cbow_words_value[0];
                     for (i = 0; i < cw; i++){
@@ -919,16 +921,16 @@ void *trainModelThread(void *id) {
                             cbow_words_weight[i] = (cbow_words_value[i] - idf_min) / (idf_max - idf_min);
                     } else {
                         for (i = 0; i < cw; i++)
-                            cbow_words_weight[i] = 1 / cw;
+                            cbow_words_weight[i] = 1.0 / cw;
                     }
                 } else {
                     for (i = 0; i < cw; i++)
-                        cbow_words_weight[i] = 1 / cw;
+                        cbow_words_weight[i] = 1.0 / cw;
                 }
 
                 // compute input
                 for (i = 0; i < cw; i++){
-                    /* printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word); */
+                    // printf("cbow_words[%lld]: %s \n", i, vocab[cbow_words[i]].word); 
 
                     // input: mean
                     for (c = 0; c < layer1_size; c++){
@@ -983,7 +985,6 @@ void *trainModelThread(void *id) {
                         } else {
                             next_random = next_random * (unsigned long long)25214903917 + 11;
                             target = table[(next_random >> 16) % table_size];
-
                             if (target == 0)
                                 target = next_random % (vocab_size - 1) + 1;
                             if (target == word)

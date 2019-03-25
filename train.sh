@@ -16,19 +16,19 @@ mkdir -p log/
 mkdir -p models/
 
 python train.py \
-    --data_path data/ChnSentiCorp_htl_all.cleand.txt \
-    --data_dir data/ \
-    --vocab_size 8000 \
-    --min_count 1 \
+    --data_path ./data/dmsc_v2_ratings.cleaned.txt \
+    --data_dir ./data/ \
+    --vocab_size 2e4 \
+    --min_count 3 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_weight \
+    --model_type rnn \
     --rnn_type GRU \
     --n_classes 2 \
     --embedding_size 100 \
-    --hidden_size 256 \
+    --hidden_size 128 \
     --num_layers 1 \
     --bidirectional \
     --t_num_layers 1 \
@@ -46,7 +46,7 @@ python train.py \
     --dropout 0.7 \
     --lr 0.001 \
     --min_len 3 \
-    --max_len 170 \
+    --max_len 75 \
     --batch_size 128 \
     --valid_split 0.15 \
     --test_split 1 \
