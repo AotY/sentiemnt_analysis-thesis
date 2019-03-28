@@ -18,15 +18,15 @@ mkdir -p models/
 python train.py \
     --data_path ./data/dmsc_v2_ratings.cleaned.txt \
     --data_dir ./data/ \
-    --vocab_size 2e4 \
-    --min_count 3 \
+    --vocab_size 12000 \
+    --min_count 2 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type rnn \
+    --model_type bert_avg \
     --rnn_type GRU \
-    --n_classes 2 \
+    --n_classes 3 \
     --embedding_size 100 \
     --hidden_size 128 \
     --num_layers 1 \

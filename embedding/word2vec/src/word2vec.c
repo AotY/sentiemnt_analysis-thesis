@@ -18,7 +18,7 @@
 #include <math.h>
 #include <pthread.h>
 
-#define MAX_STRING 100
+#define MAX_STRING 300
 #define EXP_TABLE_SIZE 1000
 #define MAX_EXP 6
 #define MAX_SENTENCE_LENGTH 1000
@@ -43,7 +43,7 @@ struct VocabWord {
 };
 
 
-char document_split[MAX_STRING] = "DOCUMENT_SPLIT";
+char document_split[MAX_STRING] = "DOCUMENTSPLIT";
 
 char train_word_file[MAX_STRING], output_file[MAX_STRING];
 char train_pinyin_file[MAX_STRING];
@@ -77,8 +77,9 @@ real *pinyin_v; // pinyin vector
 real pinyin_rate = 1.0; // pinyin rate
 
 struct IDF {
-    real value;
     char *word;
+    /* char word[MAX_STRING]; */
+    real value;
 };
 struct IDF *idf_vocab;
 
@@ -195,10 +196,7 @@ int addWordIDF(char *word, real value) {
     if (length > MAX_STRING)
         length = MAX_STRING;
 
-    /*printf("before calloc... idf_size: %lld idf_vocab.word: %s length:%d \n", idf_size, idf_vocab[idf_size].word, length);*/
     idf_vocab[idf_size].word = (char *)calloc(length, sizeof(char));
-    /*idf_vocab[idf_size].word = (char *)malloc(length * sizeof(char));*/
-    /* printf("after calloc...\n"); */
     strcpy(idf_vocab[idf_size].word, word);
     idf_vocab[idf_size].value = value;
 
@@ -209,6 +207,7 @@ int addWordIDF(char *word, real value) {
         idf_max_size += 1000;
         idf_vocab = (struct IDF *)realloc(idf_vocab, idf_max_size * sizeof(struct IDF));
     }
+
     hash = getStrHash(word, IDF_TYPE);
     while (idf_hash[hash] != -1)
         hash = (hash + 1) % idf_hash_size;
@@ -238,14 +237,15 @@ void learnIDFFromFile(){
     /* printf("size: %lld\n", size); */
     idf_size = 0;
     for (i = 0; i < size; i++){
-        fscanf(fin, "%s\t%f\n", word, &value);
+        /* fscanf(fin, "%s\t%f\n", word, &value); */
+        fscanf(fin, "%s %f", word, &value);
         /* printf("fscanf----> %s\t%f\n", word, value); */
         word_idx = searchIDFWord(word); // if word is exists.
         /* printf("word_idx: %lld\n", word_idx); */
         if (word_idx == -1) {
             word_idx = addWordIDF(word, value);
         }
-        /*printf("%f\n", searchIDF(word)); */
+        /* printf("word_idx: %lld %f\n", word_idx, searchIDF(word)); */
     }
 
     file_size = ftell(fin);

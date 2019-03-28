@@ -20,22 +20,27 @@ parser.add_argument('--data_path', type=str, default='')
 parser.add_argument('--save_path', type=str, default='')
 parser.add_argument('--max_len', type=int, default=100)
 parser.add_argument('--min_count', type=int, default=2)
-parser.add_argument('--document_split', type=str, default='DOCUMENT_SPLIT')
+parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
 args = parser.parse_args()
 
 word_counter = Counter()
 words = list()
 doc_count = 0
+line_count = 0
 with open(args.data_path, 'r', encoding='utf-8') as f:
     for line in tqdm(f):
         line = line.rstrip()
         if line == args.document_split:
-            doc_count += 1
-            word_counter.update(set(words))
+            if line_count > 0:
+                doc_count += 1
+                word_counter.update(set(words))
             words.clear()
+            line_count = 0
         else:
             line_words = line.split()
-            words.extend(line_words)
+            if len(line_words) > 0:
+                words.extend(line_words)
+                line_count += 1
 
 # compute idf
 idf = {}
@@ -53,7 +58,7 @@ idf_len = len(idf)
 with open(args.save_path, 'w', encoding='utf-8') as f:
     f.write('%d\n' % idf_len)
     for word, value in idf:
-        f.write('%s\t%.6f\n' % (word, value))
+        f.write('%s %f\n' % (word, value))
 
 #  pickle.dump(idf, open(args.save_path, 'wb'))
 print('Compute Success.')

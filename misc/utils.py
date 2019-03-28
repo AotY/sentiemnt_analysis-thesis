@@ -10,7 +10,7 @@ Utils
 import os
 import sys
 
-import torch
+#  import torch
 import numpy as np
 
 
@@ -40,4 +40,5 @@ def load_glove_embeddings(path, word2idx, embedding_dim):
                 if vector.shape[-1] != embedding_dim:
                     raise Exception('Dimension not matching.')
                 embeddings[index]=vector
-        return torch.from_numpy(embeddings).float()
+        #  return torch.from_numpy(embeddings).float()
+        return embeddings

@@ -22,36 +22,38 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_dir', type=str, default='')
 parser.add_argument('--save_path', type=str, default='')
-parser.add_argument('--document_split', type=str, default='DOCUMENT_SPLIT')
+parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
 parser.add_argument('--min_len', type=int, default=5)
-parser.add_argument('--max_len', type=int, default=100)
-parser.add_argument('--userdict', type=str, default='./data/userdict.txt')
+#  parser.add_argument('--max_len', type=int, default=2000)
+parser.add_argument('--max_string_len', type=int, default=100)
+parser.add_argument('--user_dict', type=str, default='')
+parser.add_argument('--tokenizer_name', type=str, default='thulac', help='which tokenizer')
 
 args = parser.parse_args()
 
 
-tokenizer = Tokenizer(args.userdict, args.max_len)
+tokenizer = Tokenizer(args.tokenizer_name, args.user_dict, args.max_string_len)
 
 data_sources = [
-    # 'zhidao_filter.1.csv',  # 百度知道数据
-    # 'zhidao_filter.csv',  # 百度知道数据
-    # 'ChnSentiCorp_htl_all.csv',  # 7000 多条酒店评论数据，5000 多条正向评论，2000 多条负向评论
-    # 'waimai_10k.csv',  # 某外卖平台收集的用户评价，正向 4000 条，负向 约 8000 条
-    # 'online_shopping_10_cats.csv',  # 10 个类别，共 6 万多条评论数据，正、负向评论各约 3 万条，
-    # 'simplifyweibo_4_moods.csv',  # 0 万多条，带情感标注 新浪微博，正负向评论约各 5 万条
-    # 'dmsc_v2/ratings.csv',  # 28 部电影，超 70 万 用户，超 200 万条 评分/评论 数据
-    # 'yf_dianping/ratings.csv',  # 24 万家餐馆，54 万用户，440 万条评论/评分数据
-    # 'yf_amazon/ratings.csv',  # 52 万件商品，1100 多个类目，142 万用户，720 万条评论/评分数据
+    #  'ChnSentiCorp_htl_all.csv',  # 7000 多条酒店评论数据，5000 多条正向评论，2000 多条负向评论
+    #  'waimai_10k.csv',  # 某外卖平台收集的用户评价，正向 4000 条，负向 约 8000 条
+    #  'online_shopping_10_cats.csv',  # 10 个类别，共 6 万多条评论数据，正、负向评论各约 3 万条，
+    #  'zhidao_filter.1.csv',  # 百度知道数据
+    #  'zhidao_filter.csv',  # 百度知道数据
+    #  'simplifyweibo_4_moods.csv',  # 0 万多条，带情感标注 新浪微博，正负向评论约各 5 万条
+    #  'dmsc_v2/ratings.csv',  # 28 部电影，超 70 万 用户，超 200 万条 评分/评论 数据
+    #  'yf_dianping/ratings.csv',  # 24 万家餐馆，54 万用户，440 万条评论/评分数据
+    #  'yf_amazon/ratings.csv',  # 52 万件商品，1100 多个类目，142 万用户，720 万条评论/评分数据
+    #  'weibo_senti_100k.csv',  # 10 万多条，带情感标注 新浪微博，正负向评论约各 5 万条
+    #  'baike_qa2019/baike_qa_train.json',  #
+    #  'webtext2019zh/web_text_zh_train.json',
     'wiki_zh',
-    'new2016zh/news2016zh_train.json',
-    # 'weibo_senti_100k.csv',  # 10 万多条，带情感标注 新浪微博，正负向评论约各 5 万条
-    # 'baike_qa2019/baike_qa_train.json',  #
-    # 'webtext2019zh/web_text_zh_train.json',
-    # 'raw.question.txt',
-    # 'label.cleaned.txt',
+    'news2016zh/news2016zh_train.json',
+    #  'label.cleaned.txt',
+    #  'raw.question.txt',
 ]
 
-save_file = open(args.save_path, 'a', encoding='utf-8')
+save_file = open(args.save_path, 'w', encoding='utf-8')
 for source in data_sources:
     print('source: %s' % source)
     #  if not source.startswith('./'):
@@ -73,8 +75,9 @@ for source in data_sources:
             if len(comment) > args.min_len:
                 #  texts.append(comment)
                 #  texts.append(args.document_split)
-                words = tokenizer.tokenize(comment)
-                save_file.write('%s\n' % ' '.join(words))
+                #  words = tokenizer.tokenize(comment)
+                #  save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % comment)
                 save_file.write('%s\n' % args.document_split)
 
     elif source.startswith('zhidao_filter'):
@@ -92,8 +95,9 @@ for source in data_sources:
             if len(query) > args.min_len and len(answer) > args.min_len:
                 #  texts.append(query + "\t" + answer)
                 #  texts.append(args.document_split)
-                words = tokenizer.tokenize(query + '\t' + answer)
-                save_file.write('%s\n' % ' '.join(words))
+                #  words = tokenizer.tokenize(query + '\t' + answer)
+                #  save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % (query + '\t' + answer))
                 save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('baike_qa_train.json'):
@@ -112,8 +116,9 @@ for source in data_sources:
                 if len(query) > args.min_len and len(answer) > args.min_len:
                     #  texts.append(query + "\t" + answer)
                     #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(query + '\t' + answer)
-                    save_file.write('%s\n' % ' '.join(words))
+                    #  words = tokenizer.tokenize(query + '\t' + answer)
+                    #  save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % (query + '\t' + answer))
                     save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('web_text_zh_train.json'):
@@ -130,8 +135,9 @@ for source in data_sources:
                 if len(query) > args.min_len and len(content) > args.min_len:
                     #  texts.append(query + "\t" + content)
                     #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(query + '\t' + content)
-                    save_file.write('%s\n' % ' '.join(words))
+                    #  words = tokenizer.tokenize(query + '\t' + content)
+                    #  save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % (query + '\t' + content))
                     save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('news2016zh_train.json'):
@@ -140,32 +146,43 @@ for source in data_sources:
             for line in f:
                 line = line.rstrip()
                 line = json.loads(line)
-                content = line['content']
-                if len(content) > args.min_len:
-                    #  texts.append(content)
-                    #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(content)
-                    save_file.write('%s\n' % ' '.join(words))
-                    save_file.write('%s\n' % args.document_split)
+                #  content = line['content']
+                texts = line['content'].split()
+                if len(texts) == 0:
+                    continue
+                for text in texts:
+                    if len(text) > args.min_len:
+                        #  texts.append(content)
+                        #  texts.append(args.document_split)
+                        words = tokenizer.tokenize(text)
+                        save_file.write('%s\n' % ' '.join(words))
+                        #  save_file.write('%s\n' % (content))
+                save_file.write('%s\n' % args.document_split)
 
     elif source.startswith('wiki_zh'):
         texts = list()
         for folder in os.listdir(source_path):
-            folder_path = os.path.join(source, folder)
+            folder_path = os.path.join(source_path, folder)
+            #  print(folder_path)
             if os.path.isdir(folder_path):
-                for file_name in os.listdir():
+                for file_name in os.listdir(folder_path):
+                    #  print(file_name)
                     file_path = os.path.join(folder_path, file_name)
                     with open(file_path, 'r') as f:
                         for line in f:
                             line = line.rstrip()
                             line = json.loads(line)
-                            text = line['text']
-                            if len(text) > args.min_len:
-                                #  texts.append(text)
-                                #  texts.append(args.document_split)
-                                words = tokenizer.tokenize(text)
-                                save_file.write('%s\n' % ' '.join(words))
-                                save_file.write('%s\n' % args.document_split)
+                            texts = line['text'].split()
+                            if len(texts) == 0:
+                                continue
+                            for text in texts:
+                                if len(text) > args.min_len:
+                                    #  texts.append(text)
+                                    #  texts.append(args.document_split)
+                                    words = tokenizer.tokenize(text)
+                                    save_file.write('%s\n' % ' '.join(words))
+                                    #  save_file.write('%s\n' % (text))
+                            save_file.write('%s\n' % args.document_split)
     elif source.startswith('new2016zh'):
         texts = list()
         with open(source_path, 'r') as f:
@@ -174,17 +191,22 @@ for source in data_sources:
                 line = json.loads(line)
                 #  title = line['title']
                 #  desc = line['desc']
-                content = line['content']
+                #  content = line['content']
                 #  if len(title) > args.min_len:
                 #  texts.append(title)
                 #  if len(desc) > args.min_len:
                 #  texts.append(desc)
-                if len(content) > args.min_len:
-                    #  texts.append(content)
-                    #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(content)
-                    save_file.write('%s\n' % ' '.join(words))
-                    save_file.write('%s\n' % args.document_split)
+                texts = line['content'].split()
+                if len(texts) == 0:
+                    continue
+                for text in texts:
+                    if len(text) > args.min_len:
+                        #  texts.append(text)
+                        #  texts.append(args.document_split)
+                        words = tokenizer.tokenize(text)
+                        save_file.write('%s\n' % ' '.join(words))
+                        #  save_file.write('%s\n' % (text))
+                save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('raw.question.txt'):
         texts = list()
@@ -200,8 +222,9 @@ for source in data_sources:
                 if len(query) > args.min_len and len(response) > args.min_len:
                     #  texts.append(query + '\t' + response)
                     #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(query + '\t' + response)
-                    save_file.write('%s\n' % ' '.join(words))
+                    #  words = tokenizer.tokenize(query + '\t' + response)
+                    #  save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % (query + '\t' + response))
                     save_file.write('%s\n' % args.document_split)
 
     elif source.endswith('label.cleaned.txt'):
@@ -220,8 +243,9 @@ for source in data_sources:
                 if len(text) > args.min_len:
                     #  texts.append(text)
                     #  texts.append(args.document_split)
-                    words = tokenizer.tokenize(text)
-                    save_file.write('%s\n' % ' '.join(words))
+                    #  words = tokenizer.tokenize(text)
+                    #  save_file.write('%s\n' % ' '.join(words))
+                    save_file.write('%s\n' % (text))
                     save_file.write('%s\n' % args.document_split)
     else:
         texts = list()
@@ -229,8 +253,9 @@ for source in data_sources:
             if len(review) > args.min_len:
                 #  texts.append(review)
                 #  texts.append(args.document_split)
-                words = tokenizer.tokenize(review)
-                save_file.write('%s\n' % ' '.join(words))
+                #  words = tokenizer.tokenize(review)
+                #  save_file.write('%s\n' % ' '.join(words))
+                save_file.write('%s\n' % (review))
                 save_file.write('%s\n' % args.document_split)
 
     """

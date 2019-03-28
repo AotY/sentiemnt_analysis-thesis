@@ -19,7 +19,8 @@ import pypinyin
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, default='')
-parser.add_argument('--document_split', type=str, default='DOCUMENT_SPLIT')
+parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
+parser.add_argument('--max_string_len', type=int, default=100, help='')
 parser.add_argument('--save_path', type=str, default='')
 args = parser.parse_args()
 
@@ -35,6 +36,10 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
             continue
 
         words = line.split()
+
+        #  words = [word.split()[0] for word in words if len(word.split()) > 0]
+        #  words = [word for word in words if len(word) <= self.max_string_len]
+
         pinyins = list()
         for word in words:
             #  pinyin_list = snownlp.normal.get_pinyin(word)

@@ -20,14 +20,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--raw_data', type=str, default='')
 parser.add_argument('--text', type=str, default='review')
 parser.add_argument('--label', type=str, default='label')
-parser.add_argument('--userdict', type=str, default='')
+parser.add_argument('--user_dict', type=str, default='')
+parser.add_argument('--max_string_len', type=int, default=100)
+parser.add_argument('--tokenizer_name', type=str, default='thulac', help='which tokenizer')
 parser.add_argument('--save_path', type=str, default='')
 
 parser.add_argument('--min_len', type=int, default=5)
 parser.add_argument('--max_len', type=int, default=250)
 args = parser.parse_args()
 
-tokenizer = Tokenizer(args.userdict)
+tokenizer = Tokenizer(args.tokenizer_name, args.user_dict, args.max_string_len)
 
 
 def main():
@@ -36,16 +38,19 @@ def main():
     df = df.dropna(how='any')
 
     for text, label in tqdm(zip(df[args.text], df[args.label])):
-        if args.label == 'rating':
-            if int(label) in [5, 4]:
-                label = 1
-            elif int(label) in [1, 2]:
-                label = 0
-            else:
-                continue
-
         if len(text) < args.min_len and len(text) > args.max_len:
             continue
+
+        label = int(label)
+        if args.label == 'rating':
+            if label == 5:
+                label = 2 # positive
+            elif label == 3:
+                label = 1 # neutral
+            elif label == 1:
+                label = 0 # negative
+            else:
+                continue
 
         words = tokenizer.tokenize(text)
         if len(words) == 0:

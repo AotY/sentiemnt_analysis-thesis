@@ -8,17 +8,30 @@
 Tokenizer
 """
 import re
-#  import jieba
+import jieba
 import pkuseg
+import thulac
 
 
 class Tokenizer:
-    def __init__(self, userdict_path=None, max_len=150):
-        # load user dict
-        #  if userdict_path is not None and userdict_path != '':
-            #  jieba.load_userdict(userdict_path)
-        self.seg = pkuseg.pkuseg()
-        self.max_len = max_len
+    def __init__(self, tokenizer_name='thulac', user_dict=None, max_string_len=100):
+        self.tokenizer_name = tokenizer_name
+        if tokenizer_name == 'thulac':
+            if user_dict is not None and user_dict != '':
+                self.seg = thulac.thulac(seg_only=True, user_dict=user_dict)
+            else:
+                self.seg = thulac.thulac(seg_only=True)
+        elif tokenizer_name == 'pkuseg':
+            if user_dict is not None and user_dict != '':
+                self.seg = pkuseg.pkuseg(user_dict=user_dict)
+            else:
+                self.seg = pkuse.pkuseg()
+        elif tokenizer_name == 'jieba':
+            self.seg = jieba
+            if user_dict is not None and user_dict != '':
+                self.seg.load_userdict(user_dict)
+
+        self.max_string_len = max_string_len
         url_regex_str = r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+' # URLs
         self.url_re = re.compile(url_regex_str, re.VERBOSE | re.IGNORECASE)
 
@@ -29,7 +42,7 @@ class Tokenizer:
         tokens = self.clean_str(text)
         tokens = [token.split()[0]
                   for token in tokens if len(token.split()) > 0]
-        tokens = [token for token in tokens if len(token) <= self.max_len]
+        tokens = [token for token in tokens if len(token) <= self.max_string_len]
         return tokens
 
     def clean_str(self, text):
@@ -39,10 +52,11 @@ class Tokenizer:
 
         text = self.url_re.sub(' URL ', text)
 
-        #  tokens = list(jieba.cut(text))
-        tokens = self.seg.cut(text)
+        if self.tokenizer_name in ['jieba', 'pkuseg']:
+            text = ' '.join(self.seg.cut(text))
+        elif self.tokenizer_name == 'thulac':
+            text = self.seg.cut(text, text=True)
 
-        text = ' '.join(tokens)
         text = text.replace('URL', '<URL>')
         tokens = text.split()
 
