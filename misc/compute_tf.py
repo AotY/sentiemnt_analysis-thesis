@@ -5,8 +5,7 @@
 # Distributed under terms of the MIT license.
 
 """
-Compute idf from a single file.
-see each line is a document.
+Compute tf from a single file.
 """
 
 import argparse
@@ -18,47 +17,40 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, default='')
 parser.add_argument('--save_path', type=str, default='')
-parser.add_argument('--max_string_len', type=int, default=50)
-parser.add_argument('--min_count', type=int, default=2)
 parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
 args = parser.parse_args()
 
 word_counter = Counter()
 words = list()
-doc_count = 0
 line_count = 0
+doc_count = 0
+
+save_file = open(args.save_path, 'w', encoding='utf-8')
+
 with open(args.data_path, 'r', encoding='utf-8') as f:
     for line in tqdm(f):
         line = line.rstrip()
         if line == args.document_split:
             if line_count > 0:
+                # save tf for each document
                 doc_count += 1
-                word_counter.update(set(words))
-            words.clear()
+                tf = sorted(word_counter.items(), key=lambda item: item[1], reverse=False)
+                total_count = sum(tf.values())
+                for word, count in tf:
+                    save_file.write('%s %f\n' % (word, count / total_count))
+
+            word_counter.clear()
             line_count = 0
+            save_file.write('%s\n' % args.document_split)
         else:
             line_words = line.split()
             if len(line_words) > 0:
-                words.extend(line_words)
+                word_counter.update(line_words)
                 line_count += 1
 
-# compute idf
-idf = {}
-for word, count in word_counter.items():
-    if len(word) >= args.max_string_len:
-        continue
-    if count <= args.min_count:
-        continue
-    idf[word] = math.log(doc_count / count)
-    #  print('word: %s, idf: %.3f' % (word, idf[word]))
 
-idf = sorted(idf.items(), key=lambda item: item[1], reverse=False)
+save_file.write('%s\n' % args.document_split)
+save_file.close()
 
-idf_len = len(idf)
-with open(args.save_path, 'w', encoding='utf-8') as f:
-    f.write('%d\n' % idf_len)
-    for word, value in idf:
-        f.write('%s %f\n' % (word, value))
-
-#  pickle.dump(idf, open(args.save_path, 'wb'))
+print('doc_count: ', doc_count)
 print('Compute Success.')

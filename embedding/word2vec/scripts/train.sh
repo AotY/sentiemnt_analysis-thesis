@@ -46,7 +46,7 @@ do
 				cbow=1
 			fi
 			# ./bin/word2vec
-			vector_path=$DATA_DIR/merge.$mt.$csm.$cea.$size.bin
+			vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.bin
 			./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -output $vector_path -save-vocab $VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt 
 			sleep 2
 		done

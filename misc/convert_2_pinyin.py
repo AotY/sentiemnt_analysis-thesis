@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, default='')
 parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
-parser.add_argument('--max_string_len', type=int, default=100, help='')
+parser.add_argument('--max_string_len', type=int, default=30, help='')
 parser.add_argument('--save_path', type=str, default='')
 args = parser.parse_args()
 
