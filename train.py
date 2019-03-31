@@ -25,7 +25,6 @@ import pandas as pd
 # from sklearn.metrics import recall_score
 # from sklearn.metrics import f1_score
 
-
 from sklearn.metrics import classification_report
 
 import matplotlib.pyplot as plt
@@ -214,7 +213,7 @@ else:
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        factor=0.1,
+        factor=0.2,
         min_lr=1e-08,
         patience=args.lr_patience,
         verbose=True
@@ -223,7 +222,7 @@ else:
 # early stopping
 early_stopping = EarlyStopping(
     type='min',
-    min_delta=0.00001,
+    min_delta=0.0001,
     patience=args.es_patience
 )
 
@@ -413,8 +412,7 @@ def train(epoch):
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
-                loss, report_df = cal_performance(
-                    outputs.double() + 1e-8, labels)
+                loss, report_df = cal_performance(outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
                 attnsT = attns.transpose(1, 2)
@@ -433,7 +431,6 @@ def train(epoch):
                 loss = loss + args.penalization_coeff * penalization / args.batch_size
             else:
                 loss, report_df = cal_performance(outputs.double(), labels)
-
         else:
             loss = cal_performance(outputs.double(), labels.double())
 
@@ -714,18 +711,14 @@ def cal_loss(pred, gold, smoothing):
                 # print('pred: ', pred.shape)
                 # print('gold: ', gold.shape)
                 if args.n_classes >= 2:
-                    loss = F.cross_entropy(
-                        pred, gold, weight=args.classes_weight, reduction='mean')
+                    loss = F.cross_entropy(pred, gold, weight=args.classes_weight, reduction='mean')
                 else:
-                    loss = F.binary_cross_entropy_with_logits(
-                        pred.view(-1), gold.double(), reduction='mean')
+                    loss = F.binary_cross_entropy_with_logits(pred.view(-1), gold.double(), reduction='mean')
             else:
-                #  loss = F.cross_entropy(pred, gold, reduction='sum')
                 if args.n_classes >= 2:
                     loss = F.cross_entropy(pred, gold, reduction='mean')
                 else:
-                    loss = F.binary_cross_entropy_with_logits(
-                        pred.view(-1), gold.double(), reduction='mean')
+                    loss = F.binary_cross_entropy_with_logits(pred.view(-1), gold.double(), reduction='mean')
     else:
         # pred: [batch_size, 1], gold: [batch_size, 1]
         gold = gold.float()

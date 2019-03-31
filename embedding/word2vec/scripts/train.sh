@@ -15,16 +15,19 @@ WINDOW=5
 BINARY=1
 THREADS=12
 
-FIELD=web
+FIELD=news
 
 TRAIN_WORD=$DATA_DIR/merge.$FIELD.txt
 TRAIN_PINYIN=$DATA_DIR/merge.$FIELD.pinyin.txt
 VOCAB_PATH=$DATA_DIR/merge.$FIELD.vocab.txt
+PINYIN_VOCAB_PATH=$DATA_DIR/merge.$FIELD.pinyin.vocab.txt
 IDF_PATH=$DATA_DIR/merge.$FIELD.idf.txt
+TF_PATH=$DATA_DIR/merge.$FIELD.tf.txt
 
-declare -a model_types=(3 4)
-#declare -a model_types=(1 2 3 4)
+declare -a model_types=(4 3 2 1)
 declare -a sizes=(100 200 300)
+# declare -a model_types=(4)
+# declare -a sizes=(100)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 
 mt=1
@@ -32,6 +35,7 @@ cbow=0
 size=100
 cea=negative
 hs=0
+f=1
 
 for mt in "${model_types[@]}"
 do
@@ -42,13 +46,25 @@ do
 		do
 			if [ "$csm" == "sg" ]; then
 				cbow=0
+                if [ "$mt" -gt 2 ]; then
+                    continue
+                fi
 			else
 				cbow=1
 			fi
-			# ./bin/word2vec
+
+			if [ "$FIELD" == "web" ]; then
+				f=1
+			else
+				f=2
+			fi
+
 			vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.bin
-			./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -output $vector_path -save-vocab $VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt 
-			sleep 2
+            # echo $vector_path
+
+            ./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -train-tf $TF_PATH -output $vector_path -save-vocab $VOCAB_PATH -save-pinyin-vocab $PINYIN_VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt -field-type $f
+			sleep 1
+
 		done
 	done
 done

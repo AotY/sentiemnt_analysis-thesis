@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, default='')
 parser.add_argument('--save_path', type=str, default='')
-parser.add_argument('--max_string_len', type=int, default=50)
+parser.add_argument('--max_string_len', type=int, default=30)
 parser.add_argument('--min_count', type=int, default=2)
 parser.add_argument('--document_split', type=str, default='DOCUMENTSPLIT')
 args = parser.parse_args()

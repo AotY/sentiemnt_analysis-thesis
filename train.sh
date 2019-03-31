@@ -16,15 +16,15 @@ mkdir -p log/
 mkdir -p models/
 
 python train.py \
-    --data_path ./data/dmsc_v2_ratings.cleaned.txt \
+    --data_path ./data/yf_amazon_ratings.txt \
     --data_dir ./data/ \
-    --vocab_size 12000 \
+    --vocab_size 15000 \
     --min_count 2 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type self_attention \
+    --model_type bert_max \
     --rnn_type GRU \
     --n_classes 3 \
     --embedding_size 100 \
@@ -46,7 +46,7 @@ python train.py \
     --dropout 0.7 \
     --lr 0.001 \
     --min_len 3 \
-    --max_len 75 \
+    --max_len 85 \
     --batch_size 128 \
     --valid_split 0.15 \
     --test_split 1 \

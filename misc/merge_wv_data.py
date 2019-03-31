@@ -154,9 +154,13 @@ for source in data_sources:
                     if len(text) > args.min_len:
                         #  texts.append(content)
                         #  texts.append(args.document_split)
-                        words = tokenizer.tokenize(text)
-                        save_file.write('%s\n' % ' '.join(words))
-                        #  save_file.write('%s\n' % (content))
+                        try:
+                            words = tokenizer.tokenize(text)
+                            save_file.write('%s\n' % ' '.join(words))
+                            #  save_file.write('%s\n' % (content))
+                        except Exception as e:
+                            print('text: %s' % text)
+                            continue
                 save_file.write('%s\n' % args.document_split)
 
     elif source.startswith('wiki_zh'):

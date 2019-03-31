@@ -34,8 +34,8 @@ with open(args.data_path, 'r', encoding='utf-8') as f:
             if line_count > 0:
                 # save tf for each document
                 doc_count += 1
+                total_count = sum(word_counter.values())
                 tf = sorted(word_counter.items(), key=lambda item: item[1], reverse=False)
-                total_count = sum(tf.values())
                 for word, count in tf:
                     save_file.write('%s %f\n' % (word, count / total_count))
 

@@ -21,7 +21,7 @@ parser.add_argument('--raw_data', type=str, default='')
 parser.add_argument('--text', type=str, default='review')
 parser.add_argument('--label', type=str, default='label')
 parser.add_argument('--user_dict', type=str, default='')
-parser.add_argument('--max_string_len', type=int, default=100)
+parser.add_argument('--max_string_len', type=int, default=30)
 parser.add_argument('--tokenizer_name', type=str, default='thulac', help='which tokenizer')
 parser.add_argument('--save_path', type=str, default='')
 
