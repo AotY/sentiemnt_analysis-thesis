@@ -15,7 +15,7 @@ WINDOW=5
 BINARY=1
 THREADS=12
 
-FIELD=news
+FIELD=web
 
 TRAIN_WORD=$DATA_DIR/merge.$FIELD.txt
 TRAIN_PINYIN=$DATA_DIR/merge.$FIELD.pinyin.txt
@@ -26,7 +26,7 @@ TF_PATH=$DATA_DIR/merge.$FIELD.tf.txt
 
 declare -a model_types=(4 3 2 1)
 declare -a sizes=(100 200 300)
-# declare -a model_types=(4)
+# declare -a model_types=(3)
 # declare -a sizes=(100)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 

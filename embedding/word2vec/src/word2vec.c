@@ -35,7 +35,7 @@ const int vocab_hash_size = 30000000;  // Maximum 30 * 0.7 = 21M words in the vo
 const int pinyin_vocab_hash_size = 30000000;
 /* const int idf_hash_size = 10000000; */
 
-#define MAX_DOC_SIZE 5000000
+#define MAX_DOC_SIZE 3000000
 
 typedef float real;                    // Precision of float numbers
 
@@ -93,6 +93,7 @@ real pinyin_rate = 1.0; // pinyin rate
 real *idf_map;
 
 real **tf_map;
+long long doc_size = 0, max_doc_size = 1000;
 
 /* struct IDF { */
 /* char *word; */
@@ -405,26 +406,37 @@ void learnTFFromFile(){
         exit(1);
     }
 
-    long long cur_doc = -1;
     long long word_idx, i;
 
     tf_map = (real **)calloc(MAX_DOC_SIZE, sizeof(real *));
+    /* tf_map = (real **)calloc(max_doc_size, sizeof(real *)); */
+    /* for (i = 0 ; i < MAX_DOC_SIZE; i ++) */
+        /* tf_map[i] = (real *)calloc((vocab_size + 1), sizeof(real)); */
+
+    tf_map[0] = (real *)calloc((vocab_size + 1), sizeof(real));
+
     while (1) {
         if (feof(fin))
             break;
 
         fscanf(fin, "%s %f", word, &value);
-        if (strcmp(word, document_split) == 0 || cur_doc == -1) {
-            cur_doc ++;
-            tf_map[cur_doc] = (real *)calloc((vocab_size * 2 + 1), sizeof(real));
-            for (i = 0 ; i < (vocab_size * 2 + 1); i ++)
-                tf_map[cur_doc][i] = 0.001;
+
+        if (strcmp(word, document_split) == 0) {
+            doc_size ++;
+            tf_map[doc_size] = (real *)calloc((vocab_size + 1), sizeof(real));
+
+            /* if (doc_size + 2 > max_doc_size) { */
+                /* max_doc_size += 1000; */
+                /* tf_map = (real **)realloc(tf_map, max_doc_size * sizeof(real *)); */
+            /* } */
             continue;
         }
+
         word_idx = searchWord(word);
         if (word_idx != -1) {
-            tf_map[cur_doc][word_idx] = value;
+            tf_map[doc_size][word_idx] = value;
         }
+
     }
 
     file_size = ftell(fin);
@@ -904,12 +916,13 @@ void *trainModelThread(void *id) {
                         /* printf("last_word: %lld idf_value: %lf\n", last_word, idf_value);  */
                         /* printf("idf_value: %lf\n", idf_value);  */
 
-                        if (field_type == NEWS_FIELD) {
-                            tf_value = tf_map[cur_doc][last_word];
-                            cbow_words_value[cw] = idf_value * tf_value;
-                        } else {
-                            cbow_words_value[cw] = idf_value;
-                        }
+                        /* if (field_type == NEWS_FIELD) { */
+                            /* tf_value = tf_map[cur_doc][last_word]; */
+                            /* cbow_words_value[cw] = idf_value * tf_value; */
+                        /* } else { */
+                            /* cbow_words_value[cw] = idf_value; */
+                        /* } */
+                        /* cbow_words_value[cw] = idf_value; */
 
                     }
                     cw ++;
@@ -1207,9 +1220,9 @@ void trainModel() {
     if (model_type == 3 || model_type == 4) {
         learnIDFFromFile();
 
-        if (field_type == NEWS_FIELD) {
-            learnTFFromFile();
-        }
+        /* if (field_type == NEWS_FIELD) { */
+            /* learnTFFromFile(); */
+        /* } */
     }
 
     if (output_file[0] == 0)
@@ -1458,10 +1471,10 @@ int main(int argc, char **argv) {
         if (idf_map != NULL)
             free(idf_map);
 
-        if (field_type == NEWS_FIELD) {
-            if (tf_map != NULL)
-                free(tf_map);
-        }
+        /* if (field_type == NEWS_FIELD) { */
+            /* if (tf_map != NULL) */
+                /* free(tf_map); */
+        /* } */
     }
 
 
