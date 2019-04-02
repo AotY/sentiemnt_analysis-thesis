@@ -369,8 +369,8 @@ void learnIDFFromFile(){
     real value;
 
     // init
-    idf_map = (real *)calloc((vocab_size * 2 + 1), sizeof(real));
-    for (i = 0 ; i < (vocab_size * 2 + 1); i ++)
+    idf_map = (real *)calloc((vocab_size + 1), sizeof(real));
+    for (i = 0 ; i < (vocab_size + 1); i ++)
         idf_map[i] = 0.01;
 
     fin = fopen(train_idf_file, "rb");
