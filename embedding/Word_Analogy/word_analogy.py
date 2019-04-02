@@ -54,44 +54,77 @@ class Analogy(object):
     def read_vector(self, path):
         assert os.path.isfile(path), "{} is not a file.".format(path)
         embedding_dim = -1
-        mode = 'r'
         if self.binary:
-            mode = 'ra'
-        with open(path, mode, encoding='utf-8') as f:
-            for line in f:
-                line_split = line.strip().split(' ')
-                if len(line_split) == 1:
-                    embedding_dim = line_split[0]
-                    break
-                elif len(line_split) == 2:
-                    embedding_dim = line_split[1]
-                    break
-                else:
-                    embedding_dim = len(line_split) - 1
-                    break
+            with open(self.vector_file, 'rb') as f:
+                c = None
+                # read the header
+                header = b""
+                while c != b"\n":
+                    c = f.read(1)
+                    header += c
+                print('header: ', header)
 
-        with open(path, encoding='utf-8') as f:
-            lines = f.readlines()
-            all_lines = len(lines)
-            index = 0
-            for index, line in enumerate(lines):
-                values = line.strip().split(' ')
-                if len(values) == 1 or len(values) == 2:
-                    continue
-                if len(values) != int(embedding_dim) + 1:
-                    print("\nWarning {} -line.".format(index + 1))
-                    continue
-                self.vector_dict[values[0]] = np.array(list(map(float, values[1:])))
-                if index % 2000 == 0:
-                    sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
-            sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
-        print("\nembedding words {}, embedding dim {}.".format(len(self.vector_dict), embedding_dim))
+                num_vectors, embedding_dim = (int(x) for x in header.split())
+                #  num_vectors = min(MAX_VECTORS, total_num_vectors)
+
+                print("Number of vectors: %d" % (num_vectors))
+                print("Vector size: %d" % embedding_dim)
+
+                index = 0
+                while len(self.vector_dict) < num_vectors:
+                    word = b""
+                    while True:
+                        c = f.read(1)
+                        if c == b" ":
+                            break
+                        word += c
+
+                    #  word = word.decode('utf-8')
+                    word = word.decode('utf-8').rstrip().split()[0]
+                    binary_vector = f.read(FLOAT_SIZE * embedding_dim)
+                    self.vector_dict[word] = np.array([struct.unpack_from('f', binary_vector, i)[
+                                                      0] for i in range(0, len(binary_vector), FLOAT_SIZE)])
+                    #  print('vector_dict[word]: ', self.vector_dict[word])
+                    index += 1
+
+                    if index % 2000 == 0:
+                        sys.stdout.write(
+                            "\rHandling with the {} lines, all {} lines.".format(index + 1, num_vectors))
+        else:
+            with open(path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line_split = line.strip().split(' ')
+                    if len(line_split) == 1:
+                        embedding_dim = line_split[0]
+                        break
+                    elif len(line_split) == 2:
+                        embedding_dim = line_split[1]
+                        break
+                    else:
+                        embedding_dim = len(line_split) - 1
+                        break
+            with open(path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                all_lines = len(lines)
+                index = 0
+                for index, line in enumerate(lines):
+                    values = line.strip().split(' ')
+                    if len(values) == 1 or len(values) == 2:
+                        continue
+                    if len(values) != int(embedding_dim) + 1:
+                        print("\nWarning {} -line.".format(index + 1))
+                        continue
+                    self.vector_dict[values[0]] = np.array(list(map(float, values[1:])))
+                    if index % 2000 == 0:
+                        sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
+                sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
+            print("\nembedding words {}, embedding dim {}.".format(len(self.vector_dict), embedding_dim))
 
     def worker(self, analogy, target, vec, queue):
         line_no = 0
         result = Eval(target)
 
-        with open(analogy, encoding='utf8') as fr:
+        with open(analogy, encoding='utf-8') as fr:
             while True:
                 line = fr.readline()
                 line_no += 1
