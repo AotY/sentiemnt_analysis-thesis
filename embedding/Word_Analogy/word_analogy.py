@@ -11,10 +11,16 @@
 
 import os
 import sys
+import struct
 import numpy as np
 from scipy.spatial.distance import cosine
 import multiprocessing as mp
 from optparse import OptionParser
+
+MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
+# if you want to use the full 3M embeddings then you probably need to insert the
+# vectors into some kind of database
+FLOAT_SIZE = 4  # 32bit float
 
 
 class Eval(object):
@@ -45,14 +51,18 @@ class Analogy(object):
         self.analogy_file = analogy_file
         self.binary = binary
         self.vector_dict = {}
+
+        assert os.path.isfile(vector_file), "{} is not a file.".format(vector_file)
+        assert os.path.isfile(analogy_file), "{} is not a file.".format(analogy_file)
+
         self.read_vector(self.vector_file)
+
         if self.analogy_file is "":
-            self.Word_Analogy(analogy="./Data/analogy.txt", vec=self.vector_dict)
+            self.Word_Analogy(analogy="./Data/analogy.txt")
         else:
-            self.Word_Analogy(analogy=self.analogy_file, vec=self.vector_dict)
+            self.Word_Analogy(analogy=self.analogy_file)
 
     def read_vector(self, path):
-        assert os.path.isfile(path), "{} is not a file.".format(path)
         embedding_dim = -1
         if self.binary:
             with open(self.vector_file, 'rb') as f:
@@ -62,7 +72,7 @@ class Analogy(object):
                 while c != b"\n":
                     c = f.read(1)
                     header += c
-                print('header: ', header)
+                #  print('header: ', header)
 
                 num_vectors, embedding_dim = (int(x) for x in header.split())
                 #  num_vectors = min(MAX_VECTORS, total_num_vectors)
@@ -120,20 +130,23 @@ class Analogy(object):
                 sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
             print("\nembedding words {}, embedding dim {}.".format(len(self.vector_dict), embedding_dim))
 
-    def worker(self, analogy, target, vec, queue):
+    def worker(self, analogy, target, queue):
         line_no = 0
         result = Eval(target)
-
-        with open(analogy, encoding='utf-8') as fr:
+        with open(analogy, 'r', encoding='utf-8') as fr:
             while True:
                 line = fr.readline()
                 line_no += 1
+
                 if not line:
                     print('target {} not found'.format(target))
                     break
+
                 if line[0] != ':':
                     continue
+
                 topic = line.split()[1].split('-')[0]
+
                 if topic == target:
                     print('target {} found. Beginning...'.format(target))
                     break
@@ -141,35 +154,44 @@ class Analogy(object):
             while True:
                 line = fr.readline()
                 line_no += 1
+
                 if not line or line[0] == ':':
                     print('target {} finished'.format(target))
                     break
+
                 words = line.split()
                 assert len(words) == 4
-                if any([w not in vec for w in words]):
-                    print('something is wrong with the {}-th line'.format(line_no))
+
+                if any([w not in self.vector_dict for w in words]):
+                    #  print('something is wrong with the {}-th line'.format(line_no))
                     continue
 
-                v1 = np.add(np.subtract(vec[words[1]], vec[words[0]]), vec[words[2]])
-                # v1 = vec[words[1]] - vec[words[0]] + vec[words[2]]
-                v2 = vec[words[-1]]
+                v1 = np.add(np.subtract(self.vector_dict[words[1]], self.vector_dict[words[0]]), self.vector_dict[words[2]])
+                # v1 = self.vector_dict[words[1]] - self.vector_dict[words[0]] +
+                # self.vector_dict[words[2]]
+                v2 = self.vector_dict[words[-1]]
 
                 v2_rank = 1
                 v2_score = cosine(v1, v2)
 
-                for w, v in vec.items():
+                for w, v in self.vector_dict.items():
                     if w in words:
                         continue
+
                     score = cosine(v1, v)
+
                     if score < v2_score:
                         v2_rank += 1
+
                 result.update(v2_rank)
+
         queue.put(result)
 
-    def Word_Analogy(self, analogy, vec):
+    def Word_Analogy(self, analogy):
         queue = mp.Queue()
-        category = ['capital', 'city', 'family']
-        processes = [mp.Process(target=self.worker, args=(analogy, x, vec, queue)) for x in category]
+        #  category = ['capital', 'city', 'family']
+        category = ['capital', 'city']
+        processes = [mp.Process(target=self.worker, args=(analogy, x, queue)) for x in category]
 
         for p in processes:
             p.start()

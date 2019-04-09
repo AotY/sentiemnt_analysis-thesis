@@ -30,12 +30,14 @@ class BERTCM(nn.Module):
         super().__init__()
 
         self.problem = config.problem
+        self.embedding_size = config.embedding_size
+        self.batch_size = config.batch_size
 
         self.bert = BERT(config, embedding)
 
         self.model_type = config.model_type
 
-        self.norm = LayerNorm(config.embedding_size)
+        self.norm = LayerNorm(self.embedding_size)
         self.linear_final = None
         if self.model_type in ['bert_max_kernel', 'bert_avg_kernel']:
             self.linear_final = nn.Linear(config.embedding_size * 5, config.n_classes)
@@ -68,6 +70,8 @@ class BERTCM(nn.Module):
             self.sample_weight[:5] = 0.3
             self.linear_final = nn.Linear(config.embedding_size * self.sample_num, config.n_classes)
         elif self.model_type == 'bert_sample_exp':
+            self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+        elif self.model_type == 'bert_gumbel':
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_conv1d':
             self.conv1d1 = nn.Conv1d(config.embedding_size, config.embedding_size, 6) # 45
@@ -148,6 +152,28 @@ class BERTCM(nn.Module):
             indexs = torch.multinomial(torch.exp(mean_outputs), 1)  # batch_size x 1 (sampling from each row)
             # [ batch_size, embedding_size]
             outputs = torch.cat([torch.index_select(output, 0, index) for output, index in zip(outputs, indexs)])
+        elif self.model_type == 'bert_gumbel':
+            outputs = outputs.permute(0, 2, 1)
+            batch_size, embedding_size, _ = outputs.size()
+
+            # [batch_size * embedding_size, max_len]
+            outputs = outputs.contiguous().view(-1, outputs.size(2))
+
+            # [batch_size * embedding_size, max_len]
+            gumbel_outputs = F.gumbel_softmax(outputs, tau=5.0, hard=True)
+
+            # [batch_size * embedding_size, batch_size * embedding_size]
+            weight_outputs = torch.matmul(outputs, gumbel_outputs.transpose(0, 1))
+
+            # [batch_size, embedding_size, batch_size * embedding_size]
+            outputs = weight_outputs.contiguous().view(batch_size, embedding_size, weight_outputs.size(1))
+            # [batch_size, embedding_size]
+            #  outputs = F.max_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            #  print('outputs: ', outputs.shape)
+            #  outputs = outputs.sum(dim=2)
+            #  outputs = self.norm(outputs)
+
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)

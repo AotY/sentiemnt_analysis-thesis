@@ -179,7 +179,7 @@ int searchWord(char *word) {
     while (1) {
         if (vocab_hash[hash] == -1)
             return -1;
-        if (!strcmp(word, vocab[vocab_hash[hash]].word))
+        if (strcmp(word, vocab[vocab_hash[hash]].word) == 0)
             return vocab_hash[hash];
         hash = (hash + 1) % vocab_hash_size;
     }
@@ -371,7 +371,7 @@ void learnIDFFromFile(){
     // init
     idf_map = (real *)calloc((vocab_size + 1), sizeof(real));
     for (i = 0 ; i < (vocab_size + 1); i ++)
-        idf_map[i] = 0.01;
+        idf_map[i] = 0.0001;
 
     fin = fopen(train_idf_file, "rb");
     if (fin == NULL) {
@@ -384,10 +384,8 @@ void learnIDFFromFile(){
         fscanf(fin, "%s %f", word, &value);
         word_idx = searchWord(word);
 
-        if (word_idx != -1) {
+        if (word_idx != -1)
             idf_map[word_idx] = value;
-        }
-
     }
 
     file_size = ftell(fin);
@@ -406,7 +404,7 @@ void learnTFFromFile(){
         exit(1);
     }
 
-    long long word_idx, i;
+    long long word_idx;
 
     tf_map = (real **)calloc(MAX_DOC_SIZE, sizeof(real *));
     /* tf_map = (real **)calloc(max_doc_size, sizeof(real *)); */
@@ -795,7 +793,7 @@ void *trainModelThread(void *id) {
     long long cbow_words[MAX_STRING] = {-1};
     real cbow_words_value[MAX_STRING] = {0.0};
     real cbow_words_weight[MAX_STRING] = {1.0};
-    real idf_value, tf_value = 1.0, value_max, value_min; // weight_sum;
+    real idf_value = 0.0, value_max, value_min, value_sum; // weight_sum;
     long long cur_doc = 0;
 
     long long cw = 0, i = 0;
@@ -897,10 +895,11 @@ void *trainModelThread(void *id) {
                         continue;
 
                     last_word = sentence[c];
+
                     if (last_word == -1)
                         continue;
-
-                    if (last_word == 0 || last_word == 1)
+                    
+                    if (last_word == 1) // document_split
                         continue;
 
                     cbow_words[cw] = last_word;
@@ -913,6 +912,7 @@ void *trainModelThread(void *id) {
                         }
 
                         idf_value = idf_map[last_word];
+
                         /* printf("last_word: %lld idf_value: %lf\n", last_word, idf_value);  */
                         /* printf("idf_value: %lf\n", idf_value);  */
 
@@ -933,18 +933,21 @@ void *trainModelThread(void *id) {
             if (cw > 0){
                 if (model_type == 3 || model_type == 4) {
                     // normalize value
-                    value_max = cbow_words_value[0];
-                    value_min = cbow_words_value[0];
+                    /* value_max = 0.0; */
+                    /* value_min = 0.0; */
+                    value_sum = 0.0;
                     for (i = 0; i < cw; i++){
-                        if (cbow_words_value[i] > value_max)
-                            value_max = cbow_words_value[i];
-                        if (cbow_words_value[i] < value_min)
-                            value_min = cbow_words_value[i];
+                        /* if (cbow_words_value[i] > value_max) */
+                            /* value_max = cbow_words_value[i]; */
+                        /* if (cbow_words_value[i] < value_min) */
+                            /* value_min = cbow_words_value[i]; */
+                        value_sum += cbow_words_value[i];
                     }
 
-                    if (value_max > value_min) {
+                    if (value_sum > 0) {
                         for (i = 0; i < cw; i++)
-                            cbow_words_weight[i] = (cbow_words_value[i] - value_min) / (value_max - value_min) + 0.01;
+                            cbow_words_weight[i] = cbow_words_value[i] / value_sum;
+                            /* cbow_words_weight[i] = (cbow_words_value[i] - value_min) / (value_max - value_min); */
                     } else {
                         for (i = 0; i < cw; i++)
                             cbow_words_weight[i] = 1.0 / cw;
@@ -954,13 +957,8 @@ void *trainModelThread(void *id) {
                         cbow_words_weight[i] = 1.0 / cw;
                 }
 
-                /* for (i = 0; i < cw; i++) */
-                    /* weight_sum += cbow_words_weight[i]; */
-                /* printf("weight_sum: %lf\n", weight_sum);  */
-
                 // compute input
                 for (i = 0; i < cw; i++){
-                    // input: mean
                     for (c = 0; c < layer1_size; c++){
                         neu1[c] += syn0[c + cbow_words[i] * layer1_size] * cbow_words_weight[i];
                     }

@@ -16,10 +16,10 @@ import numpy as np
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_path', type=str, help='')
-parser.add_argument('--syno_path', type=str, help='')
-parser.add_argument('--cilin_path', type=str, help='')
+parser.add_argument('--syno_path', type=str, help='', default='./data/syno.txt')
+parser.add_argument('--cilin_path', type=str, help='', default='./data/cilin_ex.txt')
 parser.add_argument('--save_path', type=str, help='')
-parser.add_argument('--augment_num', type=int, help='')
+parser.add_argument('--augment_num', type=int, help='', default=2)
 parser.add_argument('--augment_labels', nargs='+', type=int, help='')
 
 args = parser.parse_args()
@@ -69,7 +69,6 @@ with open(args.cilin_path, 'r') as f:
             for w2 in words:
                 if w1 != w2 and w2 not in syno_dict[w1]:
                     syno_dict[w1].append(w2)
-
 
 print('Loading label data...', args.augment_labels)
 label_datas = {}

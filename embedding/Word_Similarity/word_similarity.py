@@ -43,7 +43,7 @@ class Similarity(object):
         self.pprint(self.result)
 
     def read_vector(self, path):
-        print('read vector ...')
+        print('read vector ... %s' % path)
         assert os.path.isfile(path), "{} is not a file.".format(path)
         embedding_dim = -1
         if self.binary:
@@ -141,7 +141,7 @@ class Similarity(object):
         with open(similarity_name, encoding='utf-8') as fr:
             for i, line in enumerate(fr):
                 w1, w2, score = line.split()
-                print('w1: %s w2: %s' % (w1, w2))
+                #  print('w1: %s w2: %s' % (w1, w2))
                 if w1 in self.vector_dict and w2 in self.vector_dict:
                     found += 1
                     pred.append(self.cos(self.vector_dict[w1], self.vector_dict[w2]))

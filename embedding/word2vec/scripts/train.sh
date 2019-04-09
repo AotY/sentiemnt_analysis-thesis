@@ -27,15 +27,17 @@ TF_PATH=$DATA_DIR/merge.$FIELD.tf.txt
 # declare -a model_types=(4 3 2 1)
 # declare -a sizes=(100 200 300)
 declare -a model_types=(4)
-declare -a sizes=(200 300)
+declare -a sizes=(100 200)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
+# declare -a hses=(0 1) # 
+declare -a hses=(0) # 
 
 mt=1
 cbow=0
 size=100
-cea=negative
 hs=0
 f=1
+cea=negetive # or hs
 
 for mt in "${model_types[@]}"
 do
@@ -59,22 +61,24 @@ do
 				f=2
 			fi
 
-			vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.bin
-            # echo $vector_path
+            for hs in "${hses[@]}"
+            do
+                if [ "$hs" -eq 0 ]; then
+                    cea=negative
+                else
+                    cea=hs
+                fi
 
-            ./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -train-tf $TF_PATH -output $vector_path -save-vocab $VOCAB_PATH -save-pinyin-vocab $PINYIN_VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt -field-type $f
-			sleep 1
+                vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.bin
+                echo $vector_path
+
+                ./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -train-tf $TF_PATH -output $vector_path -save-vocab $VOCAB_PATH -save-pinyin-vocab $PINYIN_VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt -field-type $f
+                sleep 1
+            done
 
 		done
 	done
 done
-
-# declare -a ceas=("hs" "negative") # computationally efficient approximation
-# if [$cea == "hs"]; then
-	# hs=1
-# else
-	# hs=0
-# fi
 
 
 # $BIN_DIR/distance $VECTOR_PATH

@@ -8,9 +8,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--second', type=int, help='')
-parser.add_argument('--file', type=str, help='', default=6)
-
+parser.add_argument('--second', type=int, help='', default=3600)
+parser.add_argument('--file', type=str, help='')
 
 args = parser.parse_args()
 
