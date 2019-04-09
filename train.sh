@@ -16,8 +16,8 @@ mkdir -p log/
 mkdir -p models/
 
 
-declare -a model_types=("rnn" "cnn" "bert_avg" "bert_max" "bert_weight" "bert_sample_exp" "bert_gumbel")
-# declare -a model_types=("cnn")
+# declare -a model_types=("rnn" "cnn" "bert_avg" "bert_max" "bert_weight" "bert_sample_exp" "bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
+declare -a model_types=("bert_gumbel_sum" "bert_gumbel_tau")
 
 # --model_type bert_gumbel \
 for mt in "${model_types[@]}"
@@ -34,6 +34,7 @@ do
         --model_type $mt \
         --rnn_type GRU \
         --n_classes 3 \
+        --tau 1 \
         --embedding_size 100 \
         --hidden_size 128 \
         --num_layers 1 \

@@ -1,6 +1,6 @@
 ## 数据描述
 
-1, ChnSentiCorp_htl_all.csv
+1. **ChnSentiCorp_htl_all**.csv CSCH
 
 > label1 表示正向评论，0 表示负向评论
 >
@@ -14,9 +14,9 @@
 >
 > len: 120 conver 80%,
 >
-> ​	150 conver 87%, 
+> ​	150 conver 85%, 
 >
-> ​	170 covner 90%
+> ​	170 covner 88%
 >
 > voab:
 >
@@ -32,47 +32,73 @@
 
  
 
+2. **online_shopping_10_cats** OS10
 
+   >label1 表示正向评论，0 表示负向评论
+   >
+   >review评论内容
+   >
+   >label:
+   >
+   >​	0 ~ 3w  49%
+   >
+   >​	1 ~ 3.1w 51%
+   >
+   >len: 
+   >
+   >​	75 conver 87%
+   >
+   >​	85 conver 89%
+   >
+   >​	90 conver 90%
+   >
+   >voab:
+   >
+   >​	10000 conver 96%
+   >
+   >​	12000 conver 97%
 
+   
 
+3. **yf_amazon**
 
-3, simplifyweibo_4_moods
-
-> label  0 喜悦，1 愤怒，2 厌恶，3 低落  
+> rating  评分，[1,5] 之间的整数      
 >
-> review  微博内容
+> comment  评论内容
 >
 > label:
 >
-> ​	0 ~ 20w 55%
+> ​	0 ~ 16w 5.6%
 >
-> ​	1 ~ 5w 14%
+> ​	1 ~ 47w 16%
 >
-> ​	2 ~ 5w 15 %
->
-> ​	3 ~ 5w 15 %
+> ​	2 ~ 230w 78%
 >
 > len:
 >
-> ​	100 conver 93%
+> ​	85 conver 94.5%
 >
-> voab:
+> ​	100 conver 96%
 >
-> ​	2w conver 92%
+> 
 >
-> ​	3w conver 95%	
+> vocab:
+>
+> ​	1.5w 96.6%
+>
+> ​	2w conver 97.2%
 
 
 
-| cnn                                                          | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
-| ![simplify-cnn](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0gme5dlj30wq0ea44g.jpg) | ![Screen Shot 2019-03-25 at 15.22.35](https://ws2.sinaimg.cn/large/006tKfTcly1g1f2ihfxisj30w60do0xz.jpg) | ![simplify-bert_avg](../../VMShare/Thesis/images/experiments/simplify-bert_avg.png) | ![simplify-bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1f0gis2o9j30wo0ean2z.jpg) | ![simplify-bert_sample_](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0jeqtszj30xu0eajyu.jpg) | ![simplify-bert_weight](../../VMShare/Thesis/images/experiments/simplify-bert_weight.png) |           |
+| cnn  | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
+|      | ![yf_amazon_rnn](https://ws2.sinaimg.cn/large/006tKfTcly1g1pihqwrgrj30xw0d2aej.jpg) | ![yf_amazon_bert_avg](https://ws4.sinaimg.cn/large/006tKfTcly1g1o3yyzgpij311c0dadl5.jpg) | ![yf_amazon_bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1pigckf1lj30ww0cyq7d.jpg) | ![yf_amazon_bert_sample](https://ws2.sinaimg.cn/large/006tNc79ly1g1qxlgalgdj30zw0d2gr2.jpg) | ![yf_amazon_bert_weight](https://ws1.sinaimg.cn/large/006tKfTcly1g1pihmbbzqj30wa0ce0wq.jpg) |           |
 
  
 
 
 
-4, dmsc_v2
+4. **dmsc_v2**
 
 > rating  评分，[1,5] 之间的整数      
 >
@@ -84,7 +110,7 @@
 >
 > ​	1 ~ 47w 36%
 >
-> ​	2 ~ 64w 49%j,
+> ​	2 ~ 64w 49%
 >
 > len:
 >
@@ -114,25 +140,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**2, weibo_senti_100k**
+**weibo_senti_100k**
 
 > label  1 表示正向评论，0 表示负向评论  
 >
@@ -161,6 +169,42 @@
 
 
 
+
+**simplifyweibo_4_moods**
+
+> label  0 喜悦，1 愤怒，2 厌恶，3 低落  
+>
+> review  微博内容
+>
+> label:
+>
+> ​	0 ~ 20w 55%
+>
+> ​	1 ~ 5w 14%
+>
+> ​	2 ~ 5w 15 %
+>
+> ​	3 ~ 5w 15 %
+>
+> len:
+>
+> ​	95 conver 88%
+>
+> ​	108 conver 93%
+>
+> voab:
+>
+> ​	2w conver 94%
+>
+> ​	3w conver 95.1%	
+
+
+
+| cnn                                                          | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
+| ![simplify-cnn](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0gme5dlj30wq0ea44g.jpg) | ![Screen Shot 2019-03-25 at 15.22.35](https://ws2.sinaimg.cn/large/006tKfTcly1g1f2ihfxisj30w60do0xz.jpg) | ![simplify-bert_avg](../../VMShare/Thesis/images/experiments/simplify-bert_avg.png) | ![simplify-bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1f0gis2o9j30wo0ean2z.jpg) | ![simplify-bert_sample_](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0jeqtszj30xu0eajyu.jpg) | ![simplify-bert_weight](../../VMShare/Thesis/images/experiments/simplify-bert_weight.png) |           |
+
+ 
 
 
 
