@@ -17,7 +17,7 @@ mkdir -p models/
 
 
 # declare -a model_types=("rnn" "cnn" "bert_avg" "bert_max" "bert_weight" "bert_sample_exp" "bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
-declare -a model_types=("bert_gumbel_sum" "bert_gumbel_tau")
+declare -a model_types=("cnn" "bert_weight" "bert_smaple_exp" "bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
 
 # --model_type bert_gumbel \
 for mt in "${model_types[@]}"

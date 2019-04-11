@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-FIELD=news
+FIELD=web
 
-# declare -a model_types=(4 3 2 1)
+declare -a model_types=(1 2 3 4)
 # declare -a sizes=(100 200)
-declare -a model_types=(4)
-declare -a sizes=(100 200)
+# declare -a model_types=(4)
+declare -a sizes=(100)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 # declare -a hses=(0 1) # continuous skip-gram models, (cbow, sg)
 declare -a hses=(0) # hierarchical softmax, or negtaive
@@ -48,7 +48,7 @@ do
 
                 vector_path=./word2vec/data/merge.$FIELD.$mt.$csm.$cea.$size.bin
                 echo $vector_path
-                python Word_Similarity/word_similarity.py --vector $vector_path --similarity ./Word_Similarity/Data/wordsim-297.txt --binary
+                python Word_Similarity/word_similarity.py --vector $vector_path --similarity ./Word_Similarity/Data/wordsim-240.txt --binary
 
                 sleep 1
 
