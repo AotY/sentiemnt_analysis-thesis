@@ -8,6 +8,7 @@ import argparse
 from tqdm import tqdm
 from .vocab import Vocab
 
+
 def read_distribution(vocab_freq_path):
     freq_list = []
     with open(vocab_freq_path, 'r') as f:
@@ -51,8 +52,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-
     vocab = build_vocab(args.vocab_freq_path, args.vocab_size, args.min_count)
     print('vocab_size: ', vocab.size)
     vocab.save(args.vocab_path)
-
