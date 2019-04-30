@@ -9,10 +9,11 @@
 
 
 python misc/build_vocab_embedding.py \
-    --vocab_path data/vocab.word2idx.dict \
-    --wordvec_file data/GoogleNews-vectors-negative300.bin \
-	--type word2vec \
-	--embedding_size 300 \
-	--save_path data/word2vec.vocab.npy \
+    --data_path ./data/dmsc_v2_ratings.txt \
+    --data_dir ./data/ \
+    --vocab_size 15000 \
+    --wordvec_file ./embedding/word2vec/data/merge.web.1.cbow.negative.100.bin \
+	--embedding_size 100 \
 
 /
+

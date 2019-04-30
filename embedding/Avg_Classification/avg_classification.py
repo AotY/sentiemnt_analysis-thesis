@@ -70,6 +70,7 @@ def read_data():
 
     X = np.array(X)
     y = np.array(y)
+    return X, y
 
 
 X, y = read_data()

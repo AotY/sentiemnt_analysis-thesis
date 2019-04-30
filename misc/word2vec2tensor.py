@@ -41,7 +41,7 @@ import gensim
 logger = logging.getLogger(__name__)
 
 
-def word2vec2tensor(word2vec_model_path, tensor_filename, binary=False):
+def word2vec2tensor(word2vec_model_path, tensor_filename, binary=True):
     """Convert file in Word2Vec format and writes two files 2D tensor TSV file.
     File "tensor_filename"_tensor.tsv contains word-vectors, "tensor_filename"_metadata.tsv contains words.
     Parameters

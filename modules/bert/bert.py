@@ -72,7 +72,11 @@ class BERT(nn.Module):
         if not self.from_other:
             if self.use_pos:
                 # embedding the indexed sequence to sequence of vectors
-                embedded = self.embedding(inputs) + self.pos_embedding(inputs_pos)
+                w_embedded = self.embedding(inputs)
+                p_embedded = self.pos_embedding(inputs_pos)
+                #  print('w_embedded: ', w_embedded.dtype)
+                #  print('p_embedded: ', p_embedded.dtype)
+                embedded = w_embedded + p_embedded
             else:
                 embedded = self.embedding(inputs)
             # torch.ByteTensor([batch_size, 1, max_len, max_len)

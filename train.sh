@@ -17,16 +17,17 @@ mkdir -p models/
 
 
 # declare -a model_types=("rnn" "cnn" "bert_avg" "bert_max" "bert_weight" "bert_sample_exp" "bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
-declare -a model_types=("cnn" "bert_weight" "bert_smaple_exp" "bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
+declare -a model_types=("bert_gumbel_avg" "bert_gumbel_sum" "bert_gumbel_tau")
+# declare -a model_types=("bert_gumbel_tau")
 
 # --model_type bert_gumbel \
 for mt in "${model_types[@]}"
 do
     python train.py \
-        --data_path ./data/yf_amazon_ratings_augment.txt \
+        --data_path ./data/dmsc_v2_ratings.txt \
         --data_dir ./data/ \
         --vocab_size 15000 \
-        --min_count 3 \
+        --min_count 1 \
         --max_label_ratio 1.0 \
         --visualization_dir visualization/ \
         --log log/ \
@@ -34,7 +35,7 @@ do
         --model_type $mt \
         --rnn_type GRU \
         --n_classes 3 \
-        --tau 1 \
+        --tau 0.5 \
         --embedding_size 100 \
         --hidden_size 128 \
         --num_layers 1 \
@@ -54,7 +55,7 @@ do
         --dropout 0.7 \
         --lr 0.001 \
         --min_len 3 \
-        --max_len 100 \
+        --max_len 90 \
         --batch_size 128 \
         --valid_split 0.15 \
         --test_split 1 \
@@ -71,8 +72,8 @@ do
         --penalization_coeff 1.0 \
         --max_grad_norm 5.0 \
         --use_pos \
-        #--use_pretrained_embedding \
-        #--pre_trained_wv data/word2vec.vocab.npy \
+        --use_pretrained_embedding \
+        --pre_trained_wv data/dmsc_v2_ratings_merge.web.1.cbow.negative.100.npy \
         #--sampler \
         #--warmup_proportion 0.1 \
         #--gradient_accumulation_steps 1 \

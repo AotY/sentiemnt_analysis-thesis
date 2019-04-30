@@ -28,9 +28,8 @@ def load_embedding(config, pretrained_embedding=None):
         embedding = nn.Embedding(config.vocab_size, config.embedding_size, padding_idx=PAD_ID)
 
     elif config.use_pretrained_embedding:
-        embedding = nn.Embedding(embedding.size(0), embedding.size(1), paddingi_idx=PAD_ID)
+        embedding = nn.Embedding(pretrained_embedding.size(0), pretrained_embedding.size(1), padding_idx=PAD_ID)
         embedding.weight = nn.Parameter(pretrained_embedding)
-        embedding_size = embedding.size(1)
 
     return embedding
 

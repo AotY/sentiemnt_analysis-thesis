@@ -71,7 +71,7 @@ parser.add_argument('--n_classes', type=int)
 parser.add_argument('--t_num_layers', type=int)
 parser.add_argument('--k_size', type=int)
 parser.add_argument('--v_size', type=int)
-parser.add_argument('--tau', type=int, default=1)
+parser.add_argument('--tau', type=float, default=1)
 parser.add_argument('--num_heads', type=int)
 parser.add_argument('--in_channels', type=int)
 parser.add_argument('--out_channels', type=int)
@@ -156,8 +156,10 @@ pretrained_embedding = None
 
 if args.use_pretrained_embedding:
     if args.pre_trained_wv is not None and args.pre_trained_wv != '':
+        print('load pretrained embedding...')
         pretrained_embedding = np.load(args.pre_trained_wv)
-        pretrained_embedding = torch.from_numpy(pretrained_embedding)
+        pretrained_embedding = torch.from_numpy(pretrained_embedding).float()
+        print('pretrained embedding: ', pretrained_embedding.shape)
 
 # model
 model = SAModel(
