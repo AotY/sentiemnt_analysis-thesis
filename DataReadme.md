@@ -60,7 +60,40 @@
 
    
 
-3. **yf_amazon**
+
+3. **dmsc_v2**
+
+> rating  评分，[1,5] 之间的整数      
+>
+> comment  评论内容
+>
+> label:
+>
+> ​	0 ~ 19w 14%
+>
+> ​	1 ~ 47w 36%
+>
+> ​	2 ~ 64w 49%
+>
+> len:
+>
+> ​	75 conver 93%
+>
+> ​	80 conver 94.2%
+>
+> ​	85 conver 95.4%
+>
+> vocab:
+>
+> ​	1.2w 96.1%
+>
+> ​	1.5w 96.7%
+>
+> ​	2w conver 97.3%
+
+
+
+4. **yf_amazon**
 
 > rating  评分，[1,5] 之间的整数      
 >
@@ -95,38 +128,6 @@
 |      | ![yf_amazon_rnn](https://ws2.sinaimg.cn/large/006tKfTcly1g1pihqwrgrj30xw0d2aej.jpg) | ![yf_amazon_bert_avg](https://ws4.sinaimg.cn/large/006tKfTcly1g1o3yyzgpij311c0dadl5.jpg) | ![yf_amazon_bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1pigckf1lj30ww0cyq7d.jpg) | ![yf_amazon_bert_sample](https://ws2.sinaimg.cn/large/006tNc79ly1g1qxlgalgdj30zw0d2gr2.jpg) | ![yf_amazon_bert_weight](https://ws1.sinaimg.cn/large/006tKfTcly1g1pihmbbzqj30wa0ce0wq.jpg) |           |
 
  
-
-
-
-4. **dmsc_v2**
-
-> rating  评分，[1,5] 之间的整数      
->
-> comment  评论内容
->
-> label:
->
-> ​	0 ~ 19w 14%
->
-> ​	1 ~ 47w 36%
->
-> ​	2 ~ 64w 49%
->
-> len:
->
-> ​	75 conver 93%
->
-> ​	80 conver 94.2%
->
-> ​	85 conver 95.4%
->
-> vocab:
->
-> ​	1.2w 96.1%
->
-> ​	1.5w 96.7%
->
-> ​	2w conver 97.3%
 
 
 
