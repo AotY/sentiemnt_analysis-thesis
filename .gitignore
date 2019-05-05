@@ -23,7 +23,9 @@ embedding/word2vec/bin/*.bin
 embedding/word2vec/data/*.bin
 embedding/*.bin
 
-
+### image/png
+visualization/*.html
+visualization/*.png
 
 # data/*.dist
 
