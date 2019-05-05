@@ -27,7 +27,9 @@ embedding/*.bin
 visualization/*.html
 visualization/*.png
 visualization/self_attention/*.png
+visualization/self_attention/*.html
 visualization/transformer/*.png
+visualization/transformer/*.html
 
 # data/*.dist
 
