@@ -26,15 +26,15 @@ mkdir -p models/
 # --model_type $mt \
 
 python train.py \
-    --data_path ./data/dmsc_v2_ratings.txt \
+    --data_path ./data/dmsc_v2_ratings_augment.txt \
     --data_dir ./data/ \
     --vocab_size 15000 \
-    --min_count 1 \
+    --min_count 2 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type rnn \
+    --model_type bert_gumbel_tau \
     --rnn_type GRU \
     --n_classes 3 \
     --tau 0.5 \
@@ -75,7 +75,7 @@ python train.py \
     --max_grad_norm 5.0 \
     --use_pos \
     # --use_pretrained_embedding \
-    # --pre_trained_wv data/dmsc_v2_ratings_merge.web.1.cbow.negative.100.npy \
+    # --pre_trained_wv data/dmsc_v2_ratings_augment_merge.web.1.sg.negative.100.npy \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \

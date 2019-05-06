@@ -2,11 +2,12 @@
 
 FIELD=web
 
-declare -a model_types=(1 2 3 4)
+# declare -a model_types=(1 2 3 4)
+declare -a model_types=(1 2)
 # declare -a sizes=(100 200)
-# declare -a model_types=(4)
 declare -a sizes=(100)
-declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
+declare -a csms=("sg") # continuous skip-gram models, (cbow, sg)
+# declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 # declare -a hses=(0 1) # continuous skip-gram models, (cbow, sg)
 declare -a hses=(0) # hierarchical softmax, or negtaive
 
