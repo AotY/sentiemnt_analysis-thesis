@@ -26,10 +26,6 @@
 
 
 
-| cnn                                                          | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
-| ![chn-cnn](https://ws4.sinaimg.cn/large/006tKfTcly1g1e8jiovhpj30w20bctd0.jpg) | ![chn-rnn](https://ws2.sinaimg.cn/large/006tKfTcly1g1e8oofgjmj30ww0bqaes.jpg) | ![chn-bert_avg](https://ws4.sinaimg.cn/large/006tKfTcly1g1e8jmfiapj30v00c0gpz.jpg) | ![chn-bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1e8q04fqsj30ty0bygpv.jpg) | ![chn-bert_smaple](https://ws4.sinaimg.cn/large/006tKfTcly1g1e8oquj2pj30ww0cg0xe.jpg) | ![chn-bert_weight](https://ws2.sinaimg.cn/large/006tKfTcly1g1e96nexwlj30w60ca78s.jpg) |           |
-
  
 
 2. **online_shopping_10_cats** OS10
@@ -123,62 +119,6 @@
 
 
 
-| cnn  | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
-| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
-|      | ![yf_amazon_rnn](https://ws2.sinaimg.cn/large/006tKfTcly1g1pihqwrgrj30xw0d2aej.jpg) | ![yf_amazon_bert_avg](https://ws4.sinaimg.cn/large/006tKfTcly1g1o3yyzgpij311c0dadl5.jpg) | ![yf_amazon_bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1pigckf1lj30ww0cyq7d.jpg) | ![yf_amazon_bert_sample](https://ws2.sinaimg.cn/large/006tNc79ly1g1qxlgalgdj30zw0d2gr2.jpg) | ![yf_amazon_bert_weight](https://ws1.sinaimg.cn/large/006tKfTcly1g1pihmbbzqj30wa0ce0wq.jpg) |           |
-
- 
-
-
-
-
-
-| cnn                                                          | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
-| ![dmsc_v2-cnn](https://ws4.sinaimg.cn/large/006tKfTcly1g1ilib8kf9j30z40den3m.jpg) | ![dmsc_v2-rnn](https://ws1.sinaimg.cn/large/006tKfTcly1g1ilichhs7j30vu0d00yv.jpg) | ![dmsc_v2-bert_avg](https://ws4.sinaimg.cn/large/006tKfTcly1g1imzs3id2j30wu0cwdjv.jpg) | ![dmsc_v2-bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1ilij7k36j30ym0cudln.jpg) | ![dmsc_v2-bert_sample](https://ws4.sinaimg.cn/large/006tKfTcly1g1ilinguthj30wq0d644s.jpg) | ![dmsc_v2-bert_weight](https://ws2.sinaimg.cn/large/006tKfTcly1g1ilipsxunj30yo0cydlt.jpg) |           |
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 **weibo_senti_100k**
 
 > label  1 表示正向评论，0 表示负向评论  
@@ -236,28 +176,3 @@
 > ​	2w conver 94%
 >
 > ​	3w conver 95.1%	
-
-
-
-| cnn                                                          | rnn                                                          | bert_avg                                                     | bert_max                                                     | bert_sample                                                  | bert_weight                                                  | self_attn |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
-| ![simplify-cnn](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0gme5dlj30wq0ea44g.jpg) | ![Screen Shot 2019-03-25 at 15.22.35](https://ws2.sinaimg.cn/large/006tKfTcly1g1f2ihfxisj30w60do0xz.jpg) | ![simplify-bert_avg](../../VMShare/Thesis/images/experiments/simplify-bert_avg.png) | ![simplify-bert_max](https://ws2.sinaimg.cn/large/006tKfTcly1g1f0gis2o9j30wo0ean2z.jpg) | ![simplify-bert_sample_](https://ws4.sinaimg.cn/large/006tKfTcly1g1f0jeqtszj30xu0eajyu.jpg) | ![simplify-bert_weight](../../VMShare/Thesis/images/experiments/simplify-bert_weight.png) |           |
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
