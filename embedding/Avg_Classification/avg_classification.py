@@ -9,20 +9,19 @@ Embedding Avg as features
 
 """
 
-
 import os
 import sys
 import time
-import random
-import argparse
 from tqdm import tqdm
 from gensim.models import KeyedVectors
+import random import argparse
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_path', type=str, help='')
@@ -34,6 +33,7 @@ args = parser.parse_args()
 print(' '.join(sys.argv))
 
 embedding = KeyedVectors.load_word2vec_format(args.embedding_path, binary=True)
+
 
 def tokens_avg_vector(tokens):
     vectors = list()
@@ -76,7 +76,8 @@ def read_data():
 X, y = read_data()
 lr = LogisticRegression()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=args.test_size, random_state=23)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=args.test_size, random_state=23)
 
 lr.fit(X_train, y_train)
 
