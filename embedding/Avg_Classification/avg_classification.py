@@ -12,9 +12,10 @@ Embedding Avg as features
 import os
 import sys
 import time
+import random
+import argparse
 from tqdm import tqdm
 from gensim.models import KeyedVectors
-import random import argparse
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -83,4 +84,5 @@ lr.fit(X_train, y_train)
 
 y_predict = lr.predict(X_test)
 
-print(classification_report(y_test, y_predict))
+print(f1_score(y_test, y_predict))
+#  print(classification_report(y_test, y_predict))

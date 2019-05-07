@@ -7,9 +7,9 @@
 #
 
 
-python Avg_Classification/avg_classification.py \
-    --data_path ../data/ChnSentiCorp_htl_all.txt \
-    --embedding_path ./embedding/word2vec/data/merge.web.2.sg.negative.100.bin \
+python embedding/Avg_Classification/avg_classification.py \
+    --data_path data/ChnSentiCorp_htl_all.txt \
+    --embedding_path ./embedding/word2vec/data/merge.web.2.cbow.negative.100.bin \
     --test_size 0.2 \
 	--min_len 3 \
 

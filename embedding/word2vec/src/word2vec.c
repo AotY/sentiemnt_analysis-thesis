@@ -787,25 +787,32 @@ void destroyNet() {
 }
 
 void compute_doc_tf(FILE *fi, real *doc_tf_map) {
-    printf("compute_doc_tf .... \n");
-    real total_words = 0.0;
-    long long i;
+    /* printf("compute_doc_tf .... \n"); */
     for (i = 0; i < vocab_size; i++)
         doc_tf_map[i] = 0;
-
+    real total_words = 0.0;
+    long long word, i;
     while (1) {
         word = readWordIndex(fi);
+
+        if (word == -1 || word == 0)
+            continue;
+
         if (word == 1)
             break;
-        doc_tf_map[word] += 1;
+
+        if (feof(fi))
+            break;
+
+        doc_tf_map[word] += 1.0;
         total_words += 1.0;
     }
-    printf("total_words: %lf\n", total_words);
-    for (i = 0; i < vocab_size; i++)
-        doc_tf_map[i] /= total_words;
+    /* printf("total_words: %lf\n", total_words); */
+    if (total_words > 0) {
+        for (i = 0; i < vocab_size; i++)
+            doc_tf_map[i] /= total_words;
+    }
 }
-
-
 
 void *trainModelThread(void *id) {
     printf("trainModelThread %lld\n", (long long)id);
@@ -814,10 +821,11 @@ void *trainModelThread(void *id) {
     long long cbow_words[MAX_STRING] = {-1};
     real cbow_words_value[MAX_STRING] = {0.0};
     real cbow_words_weight[MAX_STRING] = {1.0};
-    real idf_value = 0.0, value_max, value_min, value_sum; // weight_sum;
+    real tf_value = 0.0, idf_value = 0.0, value_max, value_min, value_sum; // weight_sum;
     long long cur_doc = 0;
     int first_doc = 1;
     real *doc_tf_map;
+    doc_tf_map = (real *)calloc((vocab_size + 1), sizeof(real));
 
     long long cw = 0, i = 0;
     long long l1, l2, c, target, label;
@@ -829,7 +837,7 @@ void *trainModelThread(void *id) {
     real *neu1e = (real *)calloc(layer1_size, sizeof(real));
     FILE *fi = fopen(train_word_file, "rb");
     FILE *tf_fi = fopen(train_word_file, "rb");
-    if (fi == NULL or tf_fi == NULL) {
+    if (fi == NULL || tf_fi == NULL) {
         fprintf(stderr, "no such file or directory: %s", train_word_file);
         exit(1);
     }
@@ -857,11 +865,12 @@ void *trainModelThread(void *id) {
                 word = readWordIndex(fi);
 
                 // if model_type in [3, 4], then reads document words, computes tf value
-                if (model_type == 3 or model_type == 4) {
+                if (model_type == 3 || model_type == 4) {
                     if (word == 1 || first_doc == 1) { // document_split
                         cur_doc ++;
                         // read 
-                        doc_tf_map = (real *)calloc((vocab_size + 1), sizeof(real));
+                        /* if (doc_tf_map != NULL) */
+                            /* free(doc_tf_map); */
                         compute_doc_tf(tf_fi, doc_tf_map);
                         first_doc = 0;
                     }
@@ -889,6 +898,7 @@ void *trainModelThread(void *id) {
                     if (ran < (next_random & 0xFFFF) / (real)65536)
                         continue;
                 }
+                
                 sentence[sentence_length] = word;
                 sentence_length++;
 
@@ -945,11 +955,12 @@ void *trainModelThread(void *id) {
                             exit(0);
                         }
 
-                        idf_value = idf_map[last_word];
                         tf_value = doc_tf_map[last_word];
-                        cbow_words_value[cw] = tf_value * doc_tf_map;
+                        idf_value = idf_map[last_word];
 
-                        printf("last_word: %lld tf_value: %lf idf_value: %lf\n", last_word, tf_value, idf_value); 
+                        cbow_words_value[cw] = tf_value * idf_value;
+
+                        /* printf("last_word: %lld tf_value: %lf idf_value: %lf\n", last_word, tf_value, idf_value);  */
                         /* printf("idf_value: %lf\n", idf_value);  */
 
                         /* if (field_type == NEWS_FIELD) { */

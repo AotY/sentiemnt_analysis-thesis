@@ -26,9 +26,9 @@ mkdir -p models/
 # --model_type $mt \
 
 python train.py \
-    --data_path ./data/dmsc_v2_ratings_augment.txt \
+    --data_path ./data/ChnSentiCorp_htl_all_augment.txt \
     --data_dir ./data/ \
-    --vocab_size 15000 \
+    --vocab_size 8000 \
     --min_count 2 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
@@ -36,7 +36,7 @@ python train.py \
     --problem classification \
     --model_type bert_gumbel_tau \
     --rnn_type GRU \
-    --n_classes 3 \
+    --n_classes 2 \
     --tau 0.5 \
     --embedding_size 100 \
     --hidden_size 128 \
@@ -57,7 +57,7 @@ python train.py \
     --dropout 0.7 \
     --lr 0.001 \
     --min_len 3 \
-    --max_len 90 \
+    --max_len 180 \
     --batch_size 128 \
     --valid_split 0.15 \
     --test_split 1 \
@@ -75,7 +75,7 @@ python train.py \
     --max_grad_norm 5.0 \
     --use_pos \
     # --use_pretrained_embedding \
-    # --pre_trained_wv data/dmsc_v2_ratings_augment_merge.web.1.sg.negative.100.npy \
+    # --pre_trained_wv data/ChnSentiCorp_htl_all_augment_merge.web.2.cbow.negative.100.npy \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \

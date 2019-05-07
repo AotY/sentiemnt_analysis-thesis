@@ -208,6 +208,7 @@ class BERTCM(nn.Module):
 
             # [batch_size, embedding_size]
             outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            #  outputs = torch.sum(outputs, dim=2)
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)

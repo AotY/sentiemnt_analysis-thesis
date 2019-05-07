@@ -8,11 +8,11 @@
 
 
 python misc/augment.py \
-    --data_path ./data/label.cleaned.txt \
-    --save_path ./data/label.augment.cleaned.txt \
+    --data_path ./data/ChnSentiCorp_htl_all.txt \
+    --save_path ./data/ChnSentiCorp_htl_all_augment.txt \
     --syno_path ./data/merge_syno.txt \
     --cilin_path ./data/cilin_ex.txt \
-    --augment_num 3 \
-    --augment_labels 1 \
+    --augment_nums 1 \
+    --augment_labels 0 \
 
 

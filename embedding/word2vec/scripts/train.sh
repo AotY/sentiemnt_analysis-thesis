@@ -26,7 +26,7 @@ TF_PATH=$DATA_DIR/merge.$FIELD.tf.txt
 
 # declare -a model_types=(4 3 2 1)
 # declare -a sizes=(100 200 300)
-declare -a model_types=(4)
+declare -a model_types=(3 4)
 declare -a sizes=(100 200)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 # declare -a hses=(0 1) # 
@@ -69,7 +69,7 @@ do
                     cea=hs
                 fi
 
-                vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.bin
+                vector_path=$DATA_DIR/merge.$FIELD.$mt.$csm.$cea.$size.tfidf.bin
                 echo $vector_path
 
                 ./bin/word2vec -train-word $TRAIN_WORD -train-pinyin $TRAIN_PINYIN -train-idf $IDF_PATH -train-tf $TF_PATH -output $vector_path -save-vocab $VOCAB_PATH -save-pinyin-vocab $PINYIN_VOCAB_PATH -size $size -binary $BINARY -cbow $cbow -window $WINDOW -debug 2 -hs $hs -negative $NEGATIVE -threads $THREADS -min-count 5 -model-type $mt -field-type $f

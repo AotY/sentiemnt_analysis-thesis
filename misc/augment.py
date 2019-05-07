@@ -19,7 +19,8 @@ parser.add_argument('--data_path', type=str, help='')
 parser.add_argument('--syno_path', type=str, help='', default='./data/syno.txt')
 parser.add_argument('--cilin_path', type=str, help='', default='./data/cilin_ex.txt')
 parser.add_argument('--save_path', type=str, help='')
-parser.add_argument('--augment_num', type=int, help='', default=2)
+#  parser.add_argument('--augment_num', type=int, help='', default=2)
+parser.add_argument('--augment_nums', nargs='+', type=int, help='')
 parser.add_argument('--augment_labels', nargs='+', type=int, help='')
 
 args = parser.parse_args()
@@ -72,8 +73,10 @@ with open(args.cilin_path, 'r') as f:
 
 print('Loading label data...', args.augment_labels)
 label_datas = {}
-for label in args.augment_labels:
+label_augment_num_dict = {}
+for label, augment_num in zip(args.augment_labels, args.augment_nums):
     label_datas[label] = list()
+    label_augment_num_dict[label] = augment_num
 
 save_file = open(args.save_path, 'w')
 with open(args.data_path, 'r') as f:
@@ -87,6 +90,7 @@ with open(args.data_path, 'r') as f:
             label_datas[label].append(text)
 
 for label, label_data in label_datas.items():
+    augment_num = label_augment_num_dict[label]
     for text in label_data:
         words = text.split()
         syno_words = list()
@@ -96,7 +100,7 @@ for label, label_data in label_datas.items():
         if len(syno_words) == 0:
             continue
 
-        for _ in range(args.augment_num):
+        for _ in range(augment_num):
             new_words = words.copy()
             #  augment_count = int(np.random.geometric(p=0.5, size=1))
             #  if augment_count > len(syno_words):

@@ -11,8 +11,8 @@
 python misc/build_vocab_embedding.py \
     --data_path ./data/dmsc_v2_ratings_augment.txt \
     --data_dir ./data/ \
-    --vocab_size 15000 \
-    --wordvec_file ./embedding/word2vec/data/merge.web.4.cbow.negative.100.bin \
+    --vocab_size 12000 \
+    --wordvec_file ./embedding/word2vec/data/merge.web.2.cbow.negative.100.bin \
 	--embedding_size 100 \
 
 /
