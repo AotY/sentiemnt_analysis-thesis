@@ -56,11 +56,11 @@ class BERTCM(nn.Module):
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
         elif self.model_type == 'bert_weight':
-            self.weight = nn.Parameter(torch.zeros(config.max_len, 1, device=config.device))
+            self.weight = nn.Parameter(torch.zeros(config.batch_size, config.max_len, 1, device=config.device))
             self.weight.data.fill_(0)
             # self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
         elif self.model_type == 'bert_weight_embedding':
-            self.weight = nn.Parameter(torch.zeros(config.embedding_size, 1, device=config.device))
+            self.weight = nn.Parameter(torch.zeros(config.batch_size, config.embedding_size, 1, device=config.device))
             # self.weight.data.fill_(0)
             self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
         elif self.model_type == 'bert_sample_manual':
@@ -91,6 +91,9 @@ class BERTCM(nn.Module):
                 self.linear_final = nn.Linear(config.max_len, config.n_classes)
             else:
                 self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
+
+        if self.model_type.startswith('bert_weight') or self.model_type.startswith('bert_gumbel'):
+            self.position_weights = None
 
     def forward(self, inputs, inputs_pos, lengths=None):
         # [batch_size, max_len, embedding_size], [] list
@@ -209,6 +212,8 @@ class BERTCM(nn.Module):
             # [batch_size, embedding_size]
             outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
             #  outputs = torch.sum(outputs, dim=2)
+            # save gumbel_outputs, for visualization
+            position_weights = gumbel_outputs.numpy()  # [batch_size * embedding_size, max_len]
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)
@@ -222,6 +227,9 @@ class BERTCM(nn.Module):
             outputs = outputs.transpose(1, 2)
             outputs = outputs @ self.weight
             outputs = outputs.view(outputs.size(0), -1)
+
+            #  position_weights = self.weight.view(-1).numpy()  # [batch_size * embedding_size, max_len]
+            position_weights = self.weight.squeeze(2).numpy()  # [batch_size * embedding_size, max_len]
         elif self.model_type == 'bert_weight_embedding':
             # [batch_size, max_len, embedding_size]
             outputs = outputs @ self.weight
@@ -241,4 +249,9 @@ class BERTCM(nn.Module):
             # [batch_size, ] -> [batch_size, n_classes]
             outputs = self.linear_final(outputs)
 
+        if self.model_type.startswith('bert_weight') or self.model_type.startswith('bert_gumbel'):
+            if self.position_weights is None:
+                self.position_weights = position_weights
+            else:
+                self.position_weights += position_weights
         return outputs, attns_list

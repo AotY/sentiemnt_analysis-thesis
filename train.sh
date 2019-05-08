@@ -34,7 +34,7 @@ python train.py \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_gumbel_tau \
+    --model_type bert_weight \
     --rnn_type GRU \
     --n_classes 2 \
     --tau 0.5 \

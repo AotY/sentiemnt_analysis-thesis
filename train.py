@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2018 LeonTao
 #
-
 import warnings
 # "error", "ignore", "always", "default", "module" or "once"
 warnings.filterwarnings('ignore')
@@ -12,6 +11,7 @@ import sys
 import time
 import random
 import argparse
+import pickle
 
 import torch
 import torch.nn as nn
@@ -502,8 +502,7 @@ def eval(epoch):
             # print('legnths: ', lengths)
             # print('labels: ', labels)
 
-            outputs, attns = model(
-                inputs, lengths=lengths, inputs_pos=inputs_pos)
+            outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos)
 
             if args.problem == 'classification':
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
@@ -525,6 +524,14 @@ def eval(epoch):
                 else:
                     total_report_df = total_report_df.add(report_df)
                     total_report_df.fillna(0)
+
+    if args.model_type.startswith('bert_weight') or args.model_type.startswith('bert_gumbel'):
+        position_weigths = model.encoder.position_weigths
+        print('position_weigths shape: ', position_weigths.shape)
+        position_weigths = position_weigths / global_step
+        position_weigths = position_weigths.mean(axis=1)
+        print('position_weigths: ', position_weigths)
+        pickle.dump(position_weigths, open(os.path.join(args.data_dir, args.model_type + '_%s_position_weights' % epoch), 'wb'))
 
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
@@ -559,10 +566,11 @@ def test():
         # print('input: ', input)
 
         # outputs: [1, n_classes], [num_heads * 1, max_len, max_len] list or [1, num_heads, max_len]
-        outputs, attns = model(
-            inputs=inputs,
-            inputs_pos=inputs_pos
-        )
+        #  outputs, attns = model(
+            #  inputs=inputs,
+            #  inputs_pos=inputs_pos
+        #  )
+        outputs, attns = model(inputs, inputs_pos=inputs_pos)
 
         if args.problem == 'classification':
             outputs = F.log_softmax(outputs, dim=1)
