@@ -16,6 +16,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import multiprocessing as mp
 from optparse import OptionParser
+from format import format
 
 MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
 # if you want to use the full 3M embeddings then you probably need to insert the
@@ -46,7 +47,8 @@ class Eval(object):
 
 
 class Analogy(object):
-    def __init__(self, vector_file, analogy_file, binary):
+    def __init__(self, vector_file, analogy_file, names, binary):
+        slef.names = names
         self.vector_file = vector_file
         self.analogy_file = analogy_file
         self.binary = binary
@@ -207,16 +209,11 @@ class Analogy(object):
             acc += res.acc
             rank += res.rank
             num += res.num
-        print('Total acc: {}\nTotal mean rank: {}\n'
-              'Total number: {}\n'.format(acc / num,
-                                          rank / num,
-                                          num))
-        # return results
-
+        print('Total acc: {}\nTotal mean rank: {}\n Total number: {}\n'.
+              format(format(acc / num, spec=self.names), fromat(rank / num), format(num))
 
 if __name__ == "__main__":
     print("Word Analogy Evaluation")
-
     # vector_file = "./Data/zhwiki_substoke.100d.source"
     # analogy_file = "./Data/analogy.txt"
     # Analogy(vector_file=vector_file, analogy_file=analogy_file)
@@ -230,9 +227,12 @@ if __name__ == "__main__":
     vector_file = options.vector
     analogy_file = options.analogy
     binary = options.binary
+    names = []
+    names.append(similarity_file.split('/')[-1][:-4])
+    names.extend(vector_file.split('merge.')[-1].split('.')[:3])
 
     try:
-        Analogy(vector_file=vector_file, analogy_file=analogy_file, binary=binary)
+        Analogy(vector_file, analogy_file, names, binary=binary)
         print("All Finished.")
     except Exception as err:
         print(err)

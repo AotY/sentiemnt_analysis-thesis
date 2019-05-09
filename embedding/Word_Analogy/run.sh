@@ -3,9 +3,10 @@
 
 FIELD=news
 
-# declare -a model_types=(1 2 3 4)
-declare -a model_types=(1 2 3)
-declare -a sizes=(100 200)
+declare -a model_types=(1 2 3 4)
+# declare -a model_types=(1 2 3)
+declare -a sizes=(100)
+# declare -a sizes=(100 200)
 declare -a csms=("cbow" "sg") # continuous skip-gram models, (cbow, sg)
 
 mt=1
