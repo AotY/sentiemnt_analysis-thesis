@@ -51,4 +51,4 @@ def format(num, names=None):
     if names is None:
         return num
     else:
-        return j[names[0]][names[1]][names[2]][names[3]]
+        return j[names[0]][names[1]][names[2]]

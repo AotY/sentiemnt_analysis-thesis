@@ -6,6 +6,7 @@
 # Copyright (C) 2016 Silvio Olivastri <silvio.olivastri@gmail.com>
 # Copyright (C) 2016 Radim Rehurek <radim@rare-technologies.com>
 
+# https://radimrehurek.com/gensim/scripts/word2vec2tensor.html
 
 """This script allows converting word-vectors from word2vec format into Tensorflow 2D tensor and metadata format.
 This script used for for word-vector visualization on `Embedding Visualization <http://projector.tensorflow.org/>`_.

@@ -16,7 +16,7 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import multiprocessing as mp
 from optparse import OptionParser
-from format import format
+from formats import formats
 
 MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
 # if you want to use the full 3M embeddings then you probably need to insert the
@@ -48,14 +48,16 @@ class Eval(object):
 
 class Analogy(object):
     def __init__(self, vector_file, analogy_file, names, binary):
-        slef.names = names
+        self.names = names
         self.vector_file = vector_file
         self.analogy_file = analogy_file
         self.binary = binary
         self.vector_dict = {}
 
-        assert os.path.isfile(vector_file), "{} is not a file.".format(vector_file)
-        assert os.path.isfile(analogy_file), "{} is not a file.".format(analogy_file)
+        assert os.path.isfile(
+            vector_file), "{} is not a file.".format(vector_file)
+        assert os.path.isfile(
+            analogy_file), "{} is not a file.".format(analogy_file)
 
         self.read_vector(self.vector_file)
 
@@ -126,11 +128,15 @@ class Analogy(object):
                     if len(values) != int(embedding_dim) + 1:
                         print("\nWarning {} -line.".format(index + 1))
                         continue
-                    self.vector_dict[values[0]] = np.array(list(map(float, values[1:])))
+                    self.vector_dict[values[0]] = np.array(
+                        list(map(float, values[1:])))
                     if index % 2000 == 0:
-                        sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
-                sys.stdout.write("\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
-            print("\nembedding words {}, embedding dim {}.".format(len(self.vector_dict), embedding_dim))
+                        sys.stdout.write(
+                            "\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
+                sys.stdout.write(
+                    "\rHandling with the {} lines, all {} lines.".format(index + 1, all_lines))
+            print("\nembedding words {}, embedding dim {}.".format(
+                len(self.vector_dict), embedding_dim))
 
     def worker(self, analogy, target, queue):
         line_no = 0
@@ -168,7 +174,8 @@ class Analogy(object):
                     #  print('something is wrong with the {}-th line'.format(line_no))
                     continue
 
-                v1 = np.add(np.subtract(self.vector_dict[words[1]], self.vector_dict[words[0]]), self.vector_dict[words[2]])
+                v1 = np.add(np.subtract(
+                    self.vector_dict[words[1]], self.vector_dict[words[0]]), self.vector_dict[words[2]])
                 # v1 = self.vector_dict[words[1]] - self.vector_dict[words[0]] +
                 # self.vector_dict[words[2]]
                 v2 = self.vector_dict[words[-1]]
@@ -193,7 +200,8 @@ class Analogy(object):
         queue = mp.Queue()
         #  category = ['capital', 'city', 'family']
         category = ['capital', 'city']
-        processes = [mp.Process(target=self.worker, args=(analogy, x, queue)) for x in category]
+        processes = [mp.Process(target=self.worker, args=(
+            analogy, x, queue)) for x in category]
 
         for p in processes:
             p.start()
@@ -210,7 +218,9 @@ class Analogy(object):
             rank += res.rank
             num += res.num
         print('Total acc: {}\nTotal mean rank: {}\n Total number: {}\n'.
-              format(format(acc / num, spec=self.names), fromat(rank / num), format(num))
+              format(formats(acc / num, spec=self.names),
+                     fromats(rank / num), formats(num)))
+
 
 if __name__ == "__main__":
     print("Word Analogy Evaluation")
@@ -220,15 +230,16 @@ if __name__ == "__main__":
 
     parser = OptionParser()
     parser.add_option("--vector", dest="vector", help="vector file")
-    parser.add_option("--analogy", dest="analogy", default="", help="analogy file")
-    parser.add_option("--binary", dest="binary", action='store_true', help="similarity file")
+    parser.add_option("--analogy", dest="analogy",
+                      default="", help="analogy file")
+    parser.add_option("--binary", dest="binary",
+                      action='store_true', help="similarity file")
     (options, args) = parser.parse_args()
 
     vector_file = options.vector
     analogy_file = options.analogy
     binary = options.binary
     names = []
-    names.append(similarity_file.split('/')[-1][:-4])
     names.extend(vector_file.split('merge.')[-1].split('.')[:3])
 
     try:
@@ -236,5 +247,3 @@ if __name__ == "__main__":
         print("All Finished.")
     except Exception as err:
         print(err)
-
-
