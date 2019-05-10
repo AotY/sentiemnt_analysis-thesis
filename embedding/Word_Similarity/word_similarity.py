@@ -16,7 +16,6 @@ import logging
 import numpy as np
 from optparse import OptionParser
 from scipy import linalg, stats
-from rho import rho
 
 MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
 # if you want to use the full 3M embeddings then you probably need to insert the
@@ -25,8 +24,7 @@ FLOAT_SIZE = 4  # 32bit float
 
 
 class Similarity(object):
-    def __init__(self, vector_file, similarity_file, names='', binary=False):
-        self.names = names
+    def __init__(self, vector_file, similarity_file, binary=False):
         self.binary = binary
         self.vector_dict = {}
         self.result = {}
@@ -45,7 +43,7 @@ class Similarity(object):
         return vec1.dot(vec2)/(linalg.norm(vec1)*linalg.norm(vec2))
 
     def rho(self, vec1, vec2):
-        return rho(self.names, vec1, vec2)
+        return stats.stats.spearmanr(vec1, vec2)[0]
 
     def read_vector(self, path):
         print('read vector ... %s' % path)
@@ -129,10 +127,12 @@ class Similarity(object):
 
     def pprint(self, result):
         from prettytable import PrettyTable
-        x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
+        #  x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
+        x = PrettyTable(["Dataset", "Score (rho)"])
         x.align["Dataset"] = "l"
         for k, v in result.items():
-            x.add_row([k, v[0], v[1], v[2]])
+            x.add_row([k, v[2]])
+            #  x.add_row([k, v[0], v[1], v[2]])
         print(x)
 
     def Word_Similarity(self, similarity_name):
@@ -172,13 +172,9 @@ if __name__ == "__main__":
     vector_file = options.vector
     similarity_file = options.similarity
     binary = options.binary
-    names = []
-    names.append(similarity_file.split('/')[-1][:-4])
-    names.extend(vector_file.split('merge.')[-1].split('.')[:3])
 
     try:
-        Similarity(vector_file, similarity_file, names, binary=binary)
+        Similarity(vector_file, similarity_file, binary=binary)
         print("All Finished.")
     except Exception as err:
         print(err)
-    # stats.stats.spearmanr(vec1, vec2)[0]

@@ -91,7 +91,8 @@ def build_dataloader(config, datas):
         shuffle=False if config.sampler else True,
         num_workers=4,
         collate_fn=collate_fn,
-        sampler=train_sampler
+        sampler=train_sampler,
+        drop_last=True
     )
 
     valid_data = data.DataLoader(
@@ -100,6 +101,7 @@ def build_dataloader(config, datas):
         shuffle=False,
         num_workers=2,
         collate_fn=collate_fn,
+        drop_last=True
 
     )
 
@@ -109,6 +111,7 @@ def build_dataloader(config, datas):
         shuffle=False,
         num_workers=1,
         collate_fn=collate_fn,
+        drop_last=True
     )
 
     return train_data, valid_data, test_data, config
