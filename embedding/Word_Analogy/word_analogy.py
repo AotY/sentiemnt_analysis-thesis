@@ -16,7 +16,6 @@ import numpy as np
 from scipy.spatial.distance import cosine
 import multiprocessing as mp
 from optparse import OptionParser
-from formats import formats
 
 MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
 # if you want to use the full 3M embeddings then you probably need to insert the
@@ -47,8 +46,7 @@ class Eval(object):
 
 
 class Analogy(object):
-    def __init__(self, vector_file, analogy_file, names, binary):
-        self.names = names
+    def __init__(self, vector_file, analogy_file, binary):
         self.vector_file = vector_file
         self.analogy_file = analogy_file
         self.binary = binary
@@ -218,8 +216,7 @@ class Analogy(object):
             rank += res.rank
             num += res.num
         print('Total acc: {}\nTotal mean rank: {}\n Total number: {}\n'.
-              format(formats(acc / num, spec=self.names),
-                     fromats(rank / num), formats(num)))
+              format(acc / num, rank / num, num))
 
 
 if __name__ == "__main__":
@@ -239,11 +236,9 @@ if __name__ == "__main__":
     vector_file = options.vector
     analogy_file = options.analogy
     binary = options.binary
-    names = []
-    names.extend(vector_file.split('merge.')[-1].split('.')[:3])
 
     try:
-        Analogy(vector_file, analogy_file, names, binary=binary)
+        Analogy(vector_file, analogy_file, binary=binary)
         print("All Finished.")
     except Exception as err:
         print(err)

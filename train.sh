@@ -25,18 +25,23 @@ mkdir -p models/
 # do
 # --model_type $mt \
 
+declare -a taus=(0.001 0.1 0.5 5 10 100)
+# declare -a taus=(5 10 100)
+
+# for tau in "${taus[@]}"
+# do
 python train.py \
-    --data_path ./data/ChnSentiCorp_htl_all_augment.txt \
+    --data_path ./data/dmsc_v2_ratings_augment.txt \
     --data_dir ./data/ \
-    --vocab_size 8000 \
+    --vocab_size 12000 \
     --min_count 2 \
     --max_label_ratio 1.0 \
     --visualization_dir visualization/ \
     --log log/ \
     --problem classification \
-    --model_type bert_weight \
+    --model_type bert_gumbel_tau \
     --rnn_type GRU \
-    --n_classes 2 \
+    --n_classes 3 \
     --tau 0.5 \
     --embedding_size 100 \
     --hidden_size 128 \
@@ -57,14 +62,14 @@ python train.py \
     --dropout 0.7 \
     --lr 0.001 \
     --min_len 3 \
-    --max_len 180 \
+    --max_len 85 \
     --batch_size 128 \
     --valid_split 0.15 \
     --test_split 1 \
     --epochs 25 \
     --start_epoch 1 \
     --lr_patience 3 \
-    --es_patience 7 \
+    --es_patience 9 \
     --device cuda \
     --seed 23 \
     --save_mode best \
@@ -75,14 +80,12 @@ python train.py \
     --max_grad_norm 5.0 \
     --use_pos \
     # --use_pretrained_embedding \
-    # --pre_trained_wv data/ChnSentiCorp_htl_all_augment_merge.web.2.cbow.negative.100.npy \
+    # --pre_trained_wv data/dmsc_v2_ratings_augment_merge.web.2.sg.negative.100.npy \
     #--sampler \
     #--warmup_proportion 0.1 \
     #--gradient_accumulation_steps 1 \
     # --n_warmup_steps 4000 \ #--checkpoint ./models/classification.accuracy_93.595.pth \
     #--text 没看多久，看得简单，感觉很一般。 \
-    #--text 医生医术很高超，还有态度很棒！
-    #--text 太差了，态度差，排队慢。
     # --classes_weight 0.557 1.0 0.038 \
     #--classes_weight  0.0082 0.00151 0.000053 \
     # --smoothing \

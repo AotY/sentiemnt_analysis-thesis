@@ -23,7 +23,7 @@ import pandas as pd
 
 #  from sklearn.metrics import accuracy_score
 # from sklearn.metrics import recall_score
-# from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score
 
 from sklearn.metrics import classification_report
 
@@ -151,7 +151,7 @@ print('train classes_raio: {}'.format(classes_ratio))
 if not args.sampler:
     print('cross_entropy classes_weight: {}'.format(args.classes_weight))
 
-# load pretrained embedding TODO
+# load pretrained embedding
 pretrained_embedding = None
 
 if args.use_pretrained_embedding:
@@ -263,7 +263,7 @@ def train_epochs():
         start = time.time()
         if args.problem == 'classification':
             #  train_loss, train_accuracy, train_recall, train_f1 = train(epoch)
-            train_loss, train_report_df = train(epoch)
+            train_loss, train_report_df, train_f1 = train(epoch)
             print(' (Training) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                 loss=train_loss,
                 elapse=(time.time()-start)/60))
@@ -287,11 +287,12 @@ def train_epochs():
 
         start = time.time()
         if args.problem == 'classification':
-            valid_loss, valid_report_df = eval(epoch)
+            valid_loss, valid_report_df, valid_f1 = eval(epoch)
             print(' (Valid) loss: {loss: 8.5f}, elapse: {elapse:3.3f}min'.format(
                 loss=valid_loss,
                 elapse=(time.time()-start)/60))
             print(valid_report_df, '\n')
+            #  print('f1: ', valid_f1)
 
             #  valid_loss, valid_accuracy, valid_recall, valid_f1 = eval(epoch)
             #  print(' (Validation) loss: {loss: 8.5f}, accuracy: {accuracy:3.3f}%, '
@@ -360,7 +361,7 @@ def train_epochs():
 
                 if valid_accuracy >= max(valid_accuracies):
                     torch.save(checkpoint, model_name)
-                    print('   - [Info] The checkpoint file has been updated.')
+                    #  print('   - [Info] The checkpoint file has been updated.')
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
                 if args.problem == 'classification':
@@ -395,7 +396,7 @@ def train(epoch):
         #  total_label = 0
         #  total_accuracy = 0
         #  total_recall = 0
-        #  total_f1 = 0
+        total_f1 = 0
         total_report_df = None
 
     global_step = 0
@@ -415,7 +416,7 @@ def train(epoch):
             # self attention, penalization AA - I
             if args.model_type == 'self_attention' and args.use_penalization:
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double() + 1e-8, labels)
-                loss, report_df = cal_performance(outputs.double() + 1e-8, labels)
+                loss, report_df, f1 = cal_performance(outputs.double() + 1e-8, labels)
 
                 # [bath_size, max_len, num_heads]
                 attnsT = attns.transpose(1, 2)
@@ -433,7 +434,7 @@ def train(epoch):
 
                 loss = loss + args.penalization_coeff * penalization / args.batch_size
             else:
-                loss, report_df = cal_performance(outputs.double(), labels)
+                loss, report_df, f1 = cal_performance(outputs.double(), labels)
         else:
             loss = cal_performance(outputs.double(), labels.double())
 
@@ -459,6 +460,7 @@ def train(epoch):
             #  model.parameters(), args.max_grad_norm)
 
         if args.problem == 'classification':
+            total_f1 += f1
             if total_report_df is None:
                 total_report_df = report_df
             else:
@@ -468,14 +470,14 @@ def train(epoch):
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
         """
-        avg_loss = total_loss / times
+        avg_loss = total_loss / global_step
         avg_loss = total_loss / total_label
-        avg_accuracy = total_accuracy / times
-        avg_recall = total_recall / times
-        avg_f1 = total_f1 / times
+        avg_accuracy = total_accuracy / global_step
+        avg_recall = total_recall / global_step
         """
+        avg_f1 = total_f1 / global_step
         avg_report_df = total_report_df / global_step
-        return avg_loss, avg_report_df
+        return avg_loss, avg_report_df, avg_f1
     return avg_loss
 
 
@@ -487,8 +489,11 @@ def eval(epoch):
     if args.problem == 'classification':
         #  total_accuracy = 0
         #  total_recall = 0
-        #  total_f1 = 0
+        total_f1 = 0
         total_report_df = None
+
+    if args.model_type.startswith('bert_weight') or args.model_type.startswith('bert_gumbel'):
+        model.encoder.position_weights = None
 
     global_step = 0
     with torch.no_grad():
@@ -502,11 +507,11 @@ def eval(epoch):
             # print('legnths: ', lengths)
             # print('labels: ', labels)
 
-            outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos)
+            outputs, attns = model(inputs, lengths=lengths, inputs_pos=inputs_pos, eval=True)
 
             if args.problem == 'classification':
                 #  loss, accuracy, recall, f1 = cal_performance(outputs.double(), labels)
-                loss, report_df = cal_performance(outputs.double(), labels)
+                loss, report_df, f1 = cal_performance(outputs.double(), labels)
             else:
                 loss = cal_performance(outputs.double(), labels.double())
 
@@ -518,7 +523,7 @@ def eval(epoch):
                 #  total_label += labels.size(0)
                 #  total_accuracy += accuracy
                 #  total_recall += recall
-                #  total_f1 += f1
+                total_f1 += f1
                 if total_report_df is None:
                     total_report_df = report_df
                 else:
@@ -526,18 +531,30 @@ def eval(epoch):
                     total_report_df.fillna(0)
 
     if args.model_type.startswith('bert_weight') or args.model_type.startswith('bert_gumbel'):
-        position_weigths = model.encoder.position_weigths
-        print('position_weigths shape: ', position_weigths.shape)
-        position_weigths = position_weigths / global_step
-        position_weigths = position_weigths.mean(axis=1)
-        print('position_weigths: ', position_weigths)
-        pickle.dump(position_weigths, open(os.path.join(args.data_dir, args.model_type + '_%s_position_weights' % epoch), 'wb'))
+        # [batch_size, max_len]
+        position_weights = model.encoder.position_weights
+        #  print('position_weights shape: ', position_weights.shape)
+        position_weights = position_weights / global_step
+        # [max_len]
+        position_weights = position_weights.mean(axis=0)
+
+        # normalization
+        position_sum = position_weights.sum()
+        position_weights = position_weights / position_sum
+        #  print('position_weights: ', position_weights)
+        #  pickle.dump(position_weights, open(os.path.join(args.data_dir, args.model_type + '_%s_position_weights' % epoch), 'wb'))
+        #  position_weights.tofile(os.path.join(args.data_dir, 'OS10_adaptive_position_weights.csv'), ',')
+        #  position_weights.tofile(os.path.join(args.data_dir, 'OS10_%s_position_weights.csv' % (args.tau)), ',')
+
+        position_weights.tofile(os.path.join(args.data_dir, 'dmsc_adaptive_position_weights.csv'), ',')
+        #  position_weights.tofile(os.path.join(args.data_dir, 'dmsc_%s_position_weights.csv' % (args.tau)), ',')
 
     avg_loss = total_loss / global_step
     if args.problem == 'classification':
         avg_report_df = total_report_df / global_step
+        avg_f1 = total_f1 / global_step
 
-        return avg_loss, avg_report_df
+        return avg_loss, avg_report_df, avg_f1
     return avg_loss
 
 
@@ -671,13 +688,13 @@ def cal_performance(pred, gold):
 
         # f1 = f1_score(gold, pred, average='micro')
         #  f1 = f1_score(gold, pred, average='macro')
-        # f1 = f1_score(gold, pred, average='weighted')
         # f1 = f1_score(gold, pred, average='weighted', labels=labels)
         """
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             report_dict = classification_report(gold, pred, output_dict=True)
+            f1 = f1_score(gold, pred, average='weighted')
 
         # report_dict = classification_report(gold, pred, labels=labels, output_dict=True)
         # print(report_dict)
@@ -688,7 +705,7 @@ def cal_performance(pred, gold):
         report_df = report_df.fillna(0)
 
         #  return loss, accuracy, recall, f1
-        return loss, report_df
+        return loss, report_df, f1
     else:
         return loss
 

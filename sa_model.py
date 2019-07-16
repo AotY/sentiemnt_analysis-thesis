@@ -56,7 +56,8 @@ class SAModel(nn.Module):
     def forward(self,
                 inputs,
                 lengths=None,
-                inputs_pos=None):
+                inputs_pos=None,
+                eval=False):
         '''
         Args:
             inputs: [max_len, batch_size]
@@ -97,7 +98,7 @@ class SAModel(nn.Module):
             # [batch_size, n_classes], [num_heads * batch_size, max_len, max_len] list
             # print(inputs_pos)
             outputs, attns = self.encoder(inputs.transpose(
-                0, 1), inputs_pos.transpose(0, 1), lengths)
+                0, 1), inputs_pos.transpose(0, 1), lengths, eval=eval)
         else:
             raise ValueError('%s is invalid.' % self.config.model_type)
 

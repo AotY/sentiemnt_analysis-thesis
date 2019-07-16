@@ -55,7 +55,7 @@ class BERTCM(nn.Module):
             # self.linear_dense = nn.Linear(config.embedding_size, config.embedding_size // 2)
             # self.linear_final = nn.Linear(config.embedding_size // 2, config.n_classes)
             self.linear_final = nn.Linear(config.embedding_size, config.n_classes)
-        elif self.model_type == 'bert_weight':
+        elif self.model_type == 'bert_weight': # Transformer_Adaptive
             self.weight = nn.Parameter(torch.zeros(config.batch_size, config.max_len, 1, device=config.device))
             self.weight.data.fill_(0)
             # self.weight.data.uniform_(-np.sqrt(3.0 / config.embedding_size), np.sqrt(3.0 / config.embedding_size))
@@ -95,7 +95,7 @@ class BERTCM(nn.Module):
         if self.model_type.startswith('bert_weight') or self.model_type.startswith('bert_gumbel'):
             self.position_weights = None
 
-    def forward(self, inputs, inputs_pos, lengths=None):
+    def forward(self, inputs, inputs_pos, lengths=None, eval=False):
         # [batch_size, max_len, embedding_size], [] list
         outputs, attns_list, embedded = self.bert(inputs, inputs_pos)
 
@@ -164,7 +164,7 @@ class BERTCM(nn.Module):
             outputs = outputs.contiguous().view(-1, outputs.size(2))
 
             # [batch_size * embedding_size, max_len]
-            gumbel_outputs = F.gumbel_softmax(outputs, hard=True)
+            gumbel_outputs = F.gumbel_softmax(outputs, hard=True) # W
 
             # [batch_size * embedding_size, batch_size * embedding_size]
             weight_outputs = torch.matmul(outputs, gumbel_outputs.transpose(0, 1))
@@ -194,26 +194,32 @@ class BERTCM(nn.Module):
             outputs = outputs.sum(dim=2)
             outputs = self.norm(outputs)
         elif self.model_type == 'bert_gumbel_tau':
+            # [batch_size, embedding_size, max_len]
             outputs = outputs.permute(0, 2, 1)
             batch_size, embedding_size, _ = outputs.size()
 
-            # [batch_size * embedding_size, max_len]
-            outputs = outputs.contiguous().view(-1, outputs.size(2))
+            # [batch_size, max_len]
+            #  gumbel_inputs = outputs.mean(dim=1)
+            #  gumbel_inputs = outputs.max(dim=1)[0]
+            gumbel_inputs = outputs.sum(dim=1)
+            gumbel_inputs = torch.tanh(gumbel_inputs)
 
-            # [batch_size * embedding_size, max_len]
-            gumbel_outputs = F.gumbel_softmax(outputs, tau=self.tau)
+            # [batch_size, max_len]
+            gumbel_outputs = F.gumbel_softmax(gumbel_inputs, tau=self.tau)
 
-            # [batch_size * embedding_size, batch_size * embedding_size]
-            weight_outputs = torch.matmul(outputs, gumbel_outputs.transpose(0, 1))
-
-            # [batch_size, embedding_size, batch_size * embedding_size]
-            outputs = weight_outputs.contiguous().view(batch_size, embedding_size, weight_outputs.size(1))
+            # [batch_size, max_len, 1]
+            gumbel_outputs = gumbel_outputs.unsqueeze(2)
 
             # [batch_size, embedding_size]
-            outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
+            outputs = torch.matmul(outputs, gumbel_outputs).squeeze(2)
+
+            outputs = torch.tanh(outputs)
+
+            # [batch_size, embedding_size]
+            #  outputs = F.avg_pool1d(outputs, kernel_size=outputs.size(2)).squeeze(2)
             #  outputs = torch.sum(outputs, dim=2)
             # save gumbel_outputs, for visualization
-            position_weights = gumbel_outputs.numpy()  # [batch_size * embedding_size, max_len]
+            position_weights = gumbel_outputs.squeeze(2).detach().cpu().numpy()  # [batch_size * embedding_size, max_len]
         elif self.model_type.find('bert_rnn') != -1:
             # [max_len, batch_size, embedding_size]
             outputs = outputs.transpose(0, 1)
@@ -225,11 +231,12 @@ class BERTCM(nn.Module):
         elif self.model_type == 'bert_weight':
             # [batch_size, embedding_size, max_len]
             outputs = outputs.transpose(1, 2)
-            outputs = outputs @ self.weight
+            outputs = outputs @ self.weight #A 
             outputs = outputs.view(outputs.size(0), -1)
+            outputs = torch.tanh(outputs) # tanh
 
-            #  position_weights = self.weight.view(-1).numpy()  # [batch_size * embedding_size, max_len]
-            position_weights = self.weight.squeeze(2).numpy()  # [batch_size * embedding_size, max_len]
+            #  position_weights = self.weight.view(-1).detach().cpu().numpy()  # [batch_size * embedding_size, max_len]
+            position_weights = self.weight.squeeze(2).detach().cpu().numpy()  # [batch_size * embedding_size, max_len]
         elif self.model_type == 'bert_weight_embedding':
             # [batch_size, max_len, embedding_size]
             outputs = outputs @ self.weight
@@ -249,9 +256,10 @@ class BERTCM(nn.Module):
             # [batch_size, ] -> [batch_size, n_classes]
             outputs = self.linear_final(outputs)
 
-        if self.model_type.startswith('bert_weight') or self.model_type.startswith('bert_gumbel'):
-            if self.position_weights is None:
-                self.position_weights = position_weights
-            else:
-                self.position_weights += position_weights
+        if eval:
+            if self.model_type.startswith('bert_weight') or self.model_type.startswith('bert_gumbel'):
+                if self.position_weights is None:
+                    self.position_weights = position_weights
+                else:
+                    self.position_weights += position_weights
         return outputs, attns_list

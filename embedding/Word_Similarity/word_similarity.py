@@ -15,7 +15,7 @@ import struct
 import logging
 import numpy as np
 from optparse import OptionParser
-from scipy import linalg
+from scipy import linalg, stats
 
 MAX_VECTORS = 200000  # This script takes a lot of RAM (>2GB for 200K vectors),
 # if you want to use the full 3M embeddings then you probably need to insert the
@@ -42,6 +42,9 @@ class Similarity(object):
 
     def cos(self, vec1, vec2):
         return vec1.dot(vec2)/(linalg.norm(vec1)*linalg.norm(vec2))
+
+    def rho(self, vec1, vec2):
+        return stats.stats.spearmanr(vec1, vec2)[0]
 
     def read_vector(self, path):
         print('read vector ... %s' % path)
@@ -76,8 +79,6 @@ class Similarity(object):
                     binary_vector = f.read(FLOAT_SIZE * embedding_dim)
                     self.vector_dict[word] = np.array([struct.unpack_from('f', binary_vector, i)[
                                                       0] for i in range(0, len(binary_vector), FLOAT_SIZE)])
-                    #  print('word: {} vec: {}'.format(word, self.vector_dict[word]))
-                    #  print('word: {} vec: {}'.format(word, self.vector_dict[word]))
                     #  print('vector_dict[{}]: {} '.format(word,  self.vector_dict[word]))
                     index += 1
 
@@ -125,10 +126,12 @@ class Similarity(object):
 
     def pprint(self, result):
         from prettytable import PrettyTable
-        x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
+        #  x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
+        x = PrettyTable(["Dataset", "Score (rho)"])
         x.align["Dataset"] = "l"
         for k, v in result.items():
-            x.add_row([k, v[0], v[1], v[2]])
+            x.add_row([k, v[2]])
+            #  x.add_row([k, v[0], v[1], v[2]])
         print(x)
 
     def Word_Similarity(self, similarity_name):
@@ -146,7 +149,7 @@ class Similarity(object):
                     notfound += 1
         file_name = similarity_name[similarity_name.rfind(
             "/") + 1:].replace(".txt", "")
-        self.result[file_name] = (found, notfound, self.cos(label, pred))
+        self.result[file_name] = (found, notfound, self.rho(label, pred))
 
 
 if __name__ == "__main__":
@@ -176,4 +179,3 @@ if __name__ == "__main__":
     except Exception as err:
         print(err)
 
-    # stats.stats.spearmanr(vec1, vec2)[0]
