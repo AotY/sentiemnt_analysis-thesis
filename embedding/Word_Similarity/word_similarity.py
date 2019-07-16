@@ -126,12 +126,12 @@ class Similarity(object):
 
     def pprint(self, result):
         from prettytable import PrettyTable
-        #  x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
-        x = PrettyTable(["Dataset", "Score (rho)"])
+        x = PrettyTable(["Dataset", "Found", "Not Found", "Score (rho)"])
+        #  x = PrettyTable(["Dataset", "Score (rho)"])
         x.align["Dataset"] = "l"
         for k, v in result.items():
-            x.add_row([k, v[2]])
-            #  x.add_row([k, v[0], v[1], v[2]])
+            #  x.add_row([k, v[2]])
+            x.add_row([k, v[0], v[1], v[2]])
         print(x)
 
     def Word_Similarity(self, similarity_name):
@@ -178,4 +178,3 @@ if __name__ == "__main__":
         print("All Finished.")
     except Exception as err:
         print(err)
-
